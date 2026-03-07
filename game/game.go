@@ -96,10 +96,9 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	drawBackground(screen)
-
 	switch g.state {
 	case GameMenu:
+		screen.Fill(color.RGBA{R: 30, G: 30, B: 50, A: 255})
 		g.drawMenu(screen)
 	case GamePlaying:
 		g.drawGame(screen)
@@ -188,15 +187,7 @@ func (g *Game) drawMenu(screen *ebiten.Image) {
 }
 
 func (g *Game) drawGame(screen *ebiten.Image) {
-	offsetX := float64(ScreenWidth) / 2
-	offsetY := float64(ScreenHeight)/2 - g.cameraY
-
-	for _, p := range g.level.Platforms {
-		sx := float32(p.X + offsetX)
-		sy := float32(p.Y + offsetY)
-		vector.FillRect(screen, sx, sy, float32(p.W), float32(p.H), color.White, false)
-	}
-
+	g.level.Draw(screen, g.cameraY)
 	g.Goat.Draw(screen, g.cameraY)
 
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d m", g.currentMeters()), 10, 10)
@@ -213,10 +204,6 @@ func (g *Game) drawGameOver(screen *ebiten.Image) {
 	if g.tick%60 < 40 {
 		ebitenutil.DebugPrintAt(screen, "Click or Space to continue", ScreenWidth/2-100, ScreenHeight/2+30)
 	}
-}
-
-func drawBackground(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{R: 30, G: 30, B: 50, A: 255})
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
