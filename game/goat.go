@@ -222,6 +222,8 @@ func (g *Goat) Draw(screen *ebiten.Image, cameraY float64) {
 
 	if g.State == StateCharging {
 		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Charge %d%%", int(g.ChargingPercentage()*100)), 0, 0)
+		g.drawDashAimLine(screen, offsetX, offsetY, cameraY)
+		g.drawDashTrajectory(screen, offsetX, offsetY, cameraY)
 		g.drawChargeCircle(screen, offsetX, offsetY)
 		g.drawChargeBar(screen, offsetX, offsetY)
 	}
@@ -272,4 +274,96 @@ func chargingColor(pct float64) color.NRGBA {
 	r := uint8(pct * 255)
 	g := uint8((1 - pct) * 255)
 	return color.NRGBA{r, g, 0, 255}
+}
+
+func (g *Goat) drawDashAimLine(screen *ebiten.Image, offsetX, offsetY, cameraY float64) {
+	mx, my := ebiten.CursorPosition()
+	worldX := float64(mx) - float64(ScreenWidth)/2
+	worldY := float64(my) - float64(ScreenHeight)/2 + cameraY
+
+	dir := (Vec2{worldX, worldY}).Sub(g.Pos).Normalize()
+	if dir.Len() < 0.0001 {
+		if g.Wall == WallLeft {
+			dir = Vec2{1, -0.35}.Normalize()
+		} else {
+			dir = Vec2{-1, -0.35}.Normalize()
+		}
+	}
+
+	power := g.ChargingPercentage()
+	lineLen := 40.0 + power*70.0
+
+	sx := g.Pos.X + offsetX
+	sy := g.Pos.Y + offsetY
+	endX := sx + dir.X*lineLen
+	endY := sy + dir.Y*lineLen
+
+	for i := 0; i < 8; i++ {
+		t1 := float64(i) / 8.0
+		t2 := (float64(i) + 0.5) / 8.0
+		x1 := sx + (endX-sx)*t1
+		y1 := sy + (endY-sy)*t1
+		x2 := sx + (endX-sx)*t2
+		y2 := sy + (endY-sy)*t2
+
+		r := uint8(255)
+		gc := uint8(Lerp(255, 80, power))
+		b := uint8(Lerp(200, 30, power))
+
+		vector.StrokeLine(
+			screen,
+			float32(x1), float32(y1),
+			float32(x2), float32(y2),
+			float32(2+power*2),
+			color.RGBA{r, gc, b, 200},
+			true,
+		)
+	}
+
+	arrowSz := 6.0 + power*5.0
+	perp := Vec2{-dir.Y, dir.X}
+	ax1x := endX + (-dir.X+perp.X*0.5)*arrowSz
+	ax1y := endY + (-dir.Y+perp.Y*0.5)*arrowSz
+	ax2x := endX + (-dir.X-perp.X*0.5)*arrowSz
+	ax2y := endY + (-dir.Y-perp.Y*0.5)*arrowSz
+
+	vector.StrokeLine(screen, float32(endX), float32(endY), float32(ax1x), float32(ax1y),
+		float32(2+power*2), color.RGBA{255, 200, 50, 255}, true)
+	vector.StrokeLine(screen, float32(endX), float32(endY), float32(ax2x), float32(ax2y),
+		float32(2+power*2), color.RGBA{255, 200, 50, 255}, true)
+}
+
+func (g *Goat) drawDashTrajectory(screen *ebiten.Image, offsetX, offsetY, cameraY float64) {
+	mx, my := ebiten.CursorPosition()
+	worldX := float64(mx) - float64(ScreenWidth)/2
+	worldY := float64(my) - float64(ScreenHeight)/2 + cameraY
+
+	dir := (Vec2{worldX, worldY}).Sub(g.Pos).Normalize()
+	if dir.Len() < 0.0001 {
+		if g.Wall == WallLeft {
+			dir = Vec2{1, -0.35}.Normalize()
+		} else {
+			dir = Vec2{-1, -0.35}.Normalize()
+		}
+	}
+
+	speed := Lerp(DashMinSpeed, DashMaxSpeed, g.ChargingPercentage())
+	vel := dir.Scale(speed)
+	pos := g.Pos
+
+	for i := 0; i < 40; i++ {
+		pos = pos.Add(vel)
+		vel = vel.Scale(DashDrag)
+
+		if vel.Len() < 3.0 {
+			vel.Y += Gravity
+		}
+		if i%3 == 0 {
+			sx := pos.X + offsetX
+			sy := pos.Y + offsetY
+			alpha := uint8(Clamp(float64(120-i*3), 20, 120))
+			sz := float32(Clamp(3.0-float64(i)*0.05, 1, 3))
+			vector.FillCircle(screen, float32(sx), float32(sy), sz, color.RGBA{255, 255, 255, alpha}, true)
+		}
+	}
 }

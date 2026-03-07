@@ -6,11 +6,11 @@ const (
 
 	PixelsPerMeter = 100.0
 
-	Gravity      = 0.22
+	Gravity      = 0.35
+	DashDrag     = 0.965
 	MaxFallSpeed = 9.5
 
 	WallSlideSpeed = 0.55
-	DashDrag       = 0.985
 
 	FullChargeTime = 1.0
 	DashMinSpeed   = 8.0
