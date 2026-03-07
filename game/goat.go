@@ -29,14 +29,15 @@ const (
 )
 
 type Goat struct {
-	Pos         Vec2
-	Vel         Vec2
-	State       GoatState
-	Wall        WallSide
-	WallPlatIdx int
-	ClingTimer  int
-	FacingDir   float64
-	Image       *ebiten.Image
+	Pos          Vec2
+	Vel          Vec2
+	State        GoatState
+	Wall         WallSide
+	WallPlatIdx  int
+	ClingTimer   int
+	FacingDir    float64
+	Image        *ebiten.Image
+	DashSpeedMod float64
 
 	ChargeTime float64
 }
@@ -47,10 +48,11 @@ func NewGoat(x, y float64) *Goat {
 		log.Fatal(err)
 	}
 	return &Goat{
-		Pos:         Vec2{x, y},
-		FacingDir:   1,
-		WallPlatIdx: -1,
-		Image:       goatImage,
+		Pos:          Vec2{x, y},
+		FacingDir:    1,
+		WallPlatIdx:  -1,
+		Image:        goatImage,
+		DashSpeedMod: 1.0,
 	}
 }
 
@@ -85,13 +87,26 @@ func (g *Goat) updateAir(level *Level) {
 }
 
 func (g *Goat) updateWall(level *Level) {
+	if g.WallPlatIdx >= 0 && g.WallPlatIdx < len(level.Platforms) {
+		if level.Platforms[g.WallPlatIdx].Destroyed {
+			g.detachFromWall()
+			return
+		}
+	}
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		g.State = StateCharging
 		g.ChargeTime = 0
 		return
 	}
 
-	g.Vel.Y = WallSlideSpeed
+	p := &level.Platforms[g.WallPlatIdx]
+
+	slideSpeed := WallSlideSpeed
+	if p.Type == PlatIce {
+		slideSpeed = IceSlideSpeed
+	}
+
+	g.Vel.Y = slideSpeed
 	g.Vel.X = 0
 	g.Pos.Y += g.Vel.Y
 	g.ClingTimer++
@@ -100,13 +115,25 @@ func (g *Goat) updateWall(level *Level) {
 }
 
 func (g *Goat) updateCharging(level *Level, cameraY float64) {
+	if g.WallPlatIdx >= 0 && g.WallPlatIdx < len(level.Platforms) {
+		if level.Platforms[g.WallPlatIdx].Destroyed {
+			g.detachFromWall()
+			return
+		}
+	}
 	dt := 1.0 / float64(ebiten.TPS())
 	g.ChargeTime += dt
 	if g.ChargeTime > FullChargeTime {
 		g.ChargeTime = FullChargeTime
 	}
 
-	g.Pos.Y += WallSlideSpeed
+	slideSpeed := WallSlideSpeed
+	if g.WallPlatIdx >= 0 && g.WallPlatIdx < len(level.Platforms) {
+		if level.Platforms[g.WallPlatIdx].Type == PlatIce {
+			slideSpeed = IceSlideSpeed
+		}
+	}
+	g.Pos.Y += slideSpeed
 	g.ClingTimer++
 
 	if !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
@@ -116,6 +143,7 @@ func (g *Goat) updateCharging(level *Level, cameraY float64) {
 		dir := (Vec2{worldX, worldY}).Sub(g.Pos).Normalize()
 
 		speed := Lerp(DashMinSpeed, DashMaxSpeed, g.ChargingPercentage())
+		speed *= g.DashSpeedMod
 		g.Vel = dir.Scale(speed)
 		g.State = StateAir
 		g.Wall = WallNone
@@ -146,6 +174,10 @@ func (g *Goat) resolveCollisions(level *Level) {
 	for idx := range level.Platforms {
 		p := &level.Platforms[idx]
 
+		if p.Destroyed {
+			continue
+		}
+
 		goatL := g.Pos.X - gw/2
 		goatR := g.Pos.X + gw/2
 		goatT := g.Pos.Y - gh/2
@@ -171,22 +203,22 @@ func (g *Goat) resolveCollisions(level *Level) {
 			if distL < distR {
 				g.Pos.X = p.X - gw/2
 				g.Pos.Y = p.Y + gh/2
-				g.attachToWall(WallRight, idx)
+				g.attachToWall(WallRight, idx, level)
 			} else {
 				g.Pos.X = p.X + p.W + gw/2
 				g.Pos.Y = p.Y + gh/2
-				g.attachToWall(WallLeft, idx)
+				g.attachToWall(WallLeft, idx, level)
 			}
 			return
 
 		case minPen == penL:
 			g.Pos.X = p.X - gw/2
-			g.attachToWall(WallRight, idx)
+			g.attachToWall(WallRight, idx, level)
 			return
 
 		case minPen == penR:
 			g.Pos.X = p.X + p.W + gw/2
-			g.attachToWall(WallLeft, idx)
+			g.attachToWall(WallLeft, idx, level)
 			return
 
 		case minPen == penB:
@@ -196,7 +228,31 @@ func (g *Goat) resolveCollisions(level *Level) {
 	}
 }
 
-func (g *Goat) attachToWall(side WallSide, platIdx int) {
+func (g *Goat) attachToWall(side WallSide, platIdx int, level *Level) {
+	p := &level.Platforms[platIdx]
+
+	if p.Type == PlatBouncy {
+		if side == WallLeft || side == WallRight {
+			g.Vel.X = -g.Vel.X * BouncyReflect
+		}
+		if g.Vel.Y > 0 {
+			g.Vel.Y = -g.Vel.Y * BouncyReflect
+		}
+		g.State = StateAir
+		g.Wall = WallNone
+		g.WallPlatIdx = -1
+		return
+	}
+
+	g.DashSpeedMod = 1.0
+	if p.Type == PlatSticky {
+		g.DashSpeedMod = StickyDashMult
+	}
+
+	if p.Type == PlatCrumbly && !p.CrumbleStarted {
+		p.CrumbleStarted = true
+	}
+
 	g.State = StateWall
 	g.Wall = side
 	g.WallPlatIdx = platIdx
@@ -352,6 +408,7 @@ func (g *Goat) drawDashTrajectory(screen *ebiten.Image, offsetX, offsetY, camera
 	}
 
 	speed := Lerp(DashMinSpeed, DashMaxSpeed, g.ChargingPercentage())
+	speed *= g.DashSpeedMod
 	vel := dir.Scale(speed)
 	pos := g.Pos
 
