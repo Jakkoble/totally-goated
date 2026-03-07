@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"image/color"
 	"log"
 	"math"
@@ -307,7 +306,6 @@ func (g *Goat) Draw(screen *ebiten.Image, cameraY float64) {
 	offsetY := float64(ScreenHeight)/2 - cameraY
 
 	if g.State == StateCharging {
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Charge %d%%", int(g.ChargingPercentage()*100)), 0, 0)
 		g.drawDashAimLine(screen, offsetX, offsetY, cameraY)
 		g.drawDashTrajectory(screen, offsetX, offsetY, cameraY)
 		g.drawChargeCircle(screen, offsetX, offsetY)
