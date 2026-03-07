@@ -64,6 +64,7 @@ type Platform struct {
 
 type Level struct {
 	Platforms []Platform
+	PowerUps  []PowerUp
 	curY      float64
 	goRight   bool
 	index     int
@@ -72,6 +73,7 @@ type Level struct {
 func NewLevel() *Level {
 	l := &Level{
 		Platforms: make([]Platform, 0, 300),
+		PowerUps:  make([]PowerUp, 0, 50),
 	}
 	l.Platforms = append(l.Platforms, Platform{
 		X: -35, Y: 0, W: 70, H: 120,
@@ -153,6 +155,18 @@ func (l *Level) GenerateUntil(targetY float64) {
 
 		if !l.overlaps(p) {
 			l.Platforms = append(l.Platforms, p)
+
+			if l.index > 20 && rand.Float64() < PowerUpSpawnChance {
+				puType := PowerUpType(rand.IntN(3))
+				puX := (rand.Float64() - 0.5) * 80
+				puY := p.Y - 20 - rand.Float64()*40
+				if !l.powerUpOverlapsPlatform(puX, puY) {
+					l.PowerUps = append(l.PowerUps, PowerUp{
+						Pos:  Vec2{puX, puY},
+						Type: puType,
+					})
+				}
+			}
 		}
 
 		l.goRight = !l.goRight
@@ -203,6 +217,10 @@ func (l *Level) Draw(screen *ebiten.Image, cameraY float64) {
 		op.GeoM.Translate(sx, sy)
 		screen.DrawImage(sub, op)
 	}
+
+	for i := range l.PowerUps {
+		l.PowerUps[i].Draw(screen, cameraY)
+	}
 }
 
 func (l *Level) Update() {
@@ -216,6 +234,9 @@ func (l *Level) Update() {
 			}
 		}
 	}
+	for i := range l.PowerUps {
+		l.PowerUps[i].Update()
+	}
 }
 
 /*
@@ -226,6 +247,16 @@ func (l *Level) Update() {
 ~110m 36% special tiles
 ~150m 45% special tiles, smallest tiles, most spread out
 */
+func (l *Level) powerUpOverlapsPlatform(x, y float64) bool {
+	for _, p := range l.Platforms {
+		if x+PowerUpRadius > p.X && x-PowerUpRadius < p.X+p.W &&
+			y+PowerUpRadius > p.Y && y-PowerUpRadius < p.Y+p.H {
+			return true
+		}
+	}
+	return false
+}
+
 func (l *Level) difficulty() float64 {
 	return Clamp(float64(l.index)/200.0, 0, 1)
 }

@@ -40,6 +40,10 @@ type Goat struct {
 
 	ChargeTime float64
 	Particles  ParticleSystem
+
+	HasShield     bool
+	HasSuperDash  bool
+	SlowFallTimer float64
 }
 
 func NewGoat(x, y float64) *Goat {
@@ -74,7 +78,13 @@ func (g *Goat) Update(level *Level, cameraY float64) {
 }
 
 func (g *Goat) updateAir(level *Level) {
-	g.Vel.Y += Gravity
+	grav := Gravity
+	if g.SlowFallTimer > 0 {
+		grav *= SlowFallGravityMul
+		g.SlowFallTimer -= 1.0 / float64(ebiten.TPS())
+	}
+
+	g.Vel.Y += grav
 	if g.Vel.Y > MaxFallSpeed {
 		g.Vel.Y = MaxFallSpeed
 	}
@@ -89,7 +99,36 @@ func (g *Goat) updateAir(level *Level) {
 	g.Vel.X *= DashDrag
 
 	g.Pos = g.Pos.Add(g.Vel)
+	g.collectPowerUps(level)
 	g.resolveCollisions(level)
+}
+
+func (g *Goat) collectPowerUps(level *Level) {
+	gw := float64(g.Image.Bounds().Dx())
+	gh := float64(g.Image.Bounds().Dy())
+
+	for i := range level.PowerUps {
+		pu := &level.PowerUps[i]
+		if pu.Collected {
+			continue
+		}
+
+		dx := pu.Pos.X - Clamp(pu.Pos.X, g.Pos.X-gw/2, g.Pos.X+gw/2)
+		dy := pu.Pos.Y - Clamp(pu.Pos.Y, g.Pos.Y-gh/2, g.Pos.Y+gh/2)
+		if dx*dx+dy*dy < PowerUpRadius*PowerUpRadius {
+			pu.Collected = true
+			sfxPowerup.Play()
+
+			switch pu.Type {
+			case PowerUpShield:
+				g.HasShield = true
+			case PowerUpSuperDash:
+				g.HasSuperDash = true
+			case PowerUpSlowFall:
+				g.SlowFallTimer = SlowFallDuration
+			}
+		}
+	}
 }
 
 func (g *Goat) updateWall(level *Level) {
@@ -150,6 +189,10 @@ func (g *Goat) updateCharging(level *Level, cameraY float64) {
 
 		speed := Lerp(DashMinSpeed, DashMaxSpeed, g.ChargingPercentage())
 		speed *= g.DashSpeedMod
+		if g.HasSuperDash {
+			speed *= SuperDashMult
+			g.HasSuperDash = false
+		}
 		pct := g.ChargingPercentage()
 		switch {
 		case pct > 0.8:
@@ -304,6 +347,18 @@ func (g *Goat) Draw(screen *ebiten.Image, cameraY float64) {
 
 	offsetX := float64(ScreenWidth) / 2
 	offsetY := float64(ScreenHeight)/2 - cameraY
+
+	if g.HasShield {
+		cx := float32(g.Pos.X + offsetX)
+		cy := float32(g.Pos.Y + offsetY)
+		vector.StrokeCircle(screen, cx, cy, 22, 2, color.NRGBA{80, 180, 255, 160}, true)
+	}
+
+	if g.SlowFallTimer > 0 {
+		cx := float32(g.Pos.X + offsetX)
+		cy := float32(g.Pos.Y + offsetY)
+		vector.FillCircle(screen, cx, cy, 18, color.NRGBA{100, 230, 120, 40}, true)
+	}
 
 	if g.State == StateCharging {
 		g.drawDashAimLine(screen, offsetX, offsetY, cameraY)

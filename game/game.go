@@ -91,12 +91,24 @@ func (g *Game) Update() error {
 
 		deathY := g.cameraY + DeathMargin
 		if g.Goat.Pos.Y > deathY {
-			sfxDeath.Play()
-			if g.score > g.bestScore {
-				g.bestScore = g.score
-				saveBest(g.bestScore)
+			if g.Goat.HasShield {
+				g.Goat.HasShield = false
+				sfxShieldBreak.Play()
+
+				g.Goat.Pos.Y = g.cameraY
+				g.Goat.Pos.X = 0
+				g.Goat.Vel = Vec2{0, 0}
+				g.Goat.State = StateCharging
+				g.Goat.ChargeTime = 0
+				g.Goat.SlowFallTimer = 5.0
+			} else {
+				sfxDeath.Play()
+				if g.score > g.bestScore {
+					g.bestScore = g.score
+					saveBest(g.bestScore)
+				}
+				g.state = GameOver
 			}
-			g.state = GameOver
 		}
 
 		g.level.GenerateUntil(g.cameraY - 1000)
@@ -225,6 +237,18 @@ func (g *Game) drawGame(screen *ebiten.Image) {
 	g.speedLines.Draw(screen)
 
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d m", g.currentMeters()), 10, 10)
+	hudY := 28
+	if g.Goat.HasShield {
+		ebitenutil.DebugPrintAt(screen, "[SHIELD]", 10, hudY)
+		hudY += 16
+	}
+	if g.Goat.HasSuperDash {
+		ebitenutil.DebugPrintAt(screen, "[SUPER DASH]", 10, hudY)
+		hudY += 16
+	}
+	if g.Goat.SlowFallTimer > 0 {
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("[SLOW FALL %.1fs]", g.Goat.SlowFallTimer), 10, hudY)
+	}
 }
 
 func (g *Game) drawGameOver(screen *ebiten.Image) {

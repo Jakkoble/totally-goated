@@ -27,6 +27,8 @@ var (
 	sfxDeath         *SoundPlayer
 	sfxIce           *SoundPlayer
 	sfxMilestone     *SoundPlayer
+	sfxPowerup       *SoundPlayer
+	sfxShieldBreak   *SoundPlayer
 	sfxWallHit       *SoundPlayer
 )
 
@@ -42,6 +44,8 @@ func init() {
 	sfxDeath = loadWav("assets/death.wav")
 	sfxIce = loadWav("assets/ice.wav")
 	sfxMilestone = loadWav("assets/milestone.wav")
+	sfxPowerup = loadWav("assets/powerup.wav")
+	sfxShieldBreak = loadWav("assets/shield_break.wav")
 	sfxWallHit = loadWav("assets/wall_hit.wav")
 }
 
