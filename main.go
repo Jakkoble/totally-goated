@@ -10,7 +10,8 @@ import (
 func main() {
 	ebiten.SetWindowSize(game.ScreenWidth, game.ScreenHeight)
 	ebiten.SetWindowTitle("Totally Goated")
-	if err := ebiten.RunGame(&game.Game{}); err != nil {
+	ebiten.SetFullscreen(true)
+	if err := ebiten.RunGame(game.NewGame()); err != nil {
 		log.Fatal(err)
 	}
 }
