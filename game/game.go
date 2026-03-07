@@ -31,6 +31,8 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	drawBackground(screen)
+
 	offsetX := float64(ScreenWidth) / 2
 	offsetY := float64(ScreenHeight)/2 - g.cameraY
 
@@ -41,6 +43,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 
 	g.Goat.Draw(screen, g.cameraY)
+}
+
+func drawBackground(screen *ebiten.Image) {
+	screen.Fill(color.RGBA{R: 30, G: 30, B: 50, A: 255})
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
