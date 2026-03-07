@@ -10,27 +10,23 @@ import (
 type Game struct {
 	level   *Level
 	cameraY float64
-	Goat Goat
+	Goat    Goat
 }
 
 func NewGame() *Game {
 	return &Game{
 		level: NewLevel(),
-		Goat: *NewGoat(0, 0),
+		Goat:  *NewGoat(0, 0),
 	}
 }
 
 func (g *Game) Update() error {
-	g.Goat.Update()
+	g.Goat.Update(g.level, g.cameraY)
 
-	if ebiten.IsKeyPressed(ebiten.KeyUp) {
-		g.cameraY -= 5
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyDown) {
-		g.cameraY += 5
-	}
+	lerpSpeed := 0.08
+	g.cameraY += (g.Goat.Pos.Y - g.cameraY) * lerpSpeed
+
 	g.level.GenerateUntil(g.cameraY - 1000)
-
 	return nil
 }
 
@@ -44,7 +40,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		vector.FillRect(screen, sx, sy, float32(p.W), float32(p.H), color.White, false)
 	}
 
-	g.Goat.Draw(screen)
+	g.Goat.Draw(screen, g.cameraY)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
