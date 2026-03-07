@@ -231,6 +231,10 @@ func (g *Goat) Draw(screen *ebiten.Image, cameraY float64) {
 	op := &ebiten.DrawImageOptions{}
 	iw := float64(g.Image.Bounds().Dx())
 	ih := float64(g.Image.Bounds().Dy())
+	if g.FacingDir < 0 {
+		op.GeoM.Scale(-1, 1)
+		op.GeoM.Translate(iw, 0)
+	}
 	op.GeoM.Translate(g.Pos.X-iw/2+offsetX, g.Pos.Y-ih/2+offsetY)
 	screen.DrawImage(g.Image, op)
 }
