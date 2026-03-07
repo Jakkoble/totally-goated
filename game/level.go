@@ -8,35 +8,34 @@ type Platform struct {
 
 type Level struct {
 	Platforms []Platform
-	Height    float64
+	curY      float64
+	goRight   bool
+	index     int
 }
 
 func NewLevel() *Level {
-	l := &Level{Platforms: make([]Platform, 0, 300)}
-	l.generate()
-	return l
-}
-
-func (l *Level) generate() {
+	l := &Level{
+		Platforms: make([]Platform, 0, 300),
+	}
 	l.Platforms = append(l.Platforms, Platform{
 		X: -35, Y: 0, W: 70, H: 120,
 	})
+	return l
+}
 
-	curY := 0.0
-	goRight := true
-
-	for i := 0; i < 200; i++ {
-		rise := 50.0 + float64(i)*0.5
-		curY -= rise
+func (l *Level) GenerateUntil(targetY float64) {
+	for l.curY > targetY {
+		rise := 50.0 + float64(l.index)*0.5
+		l.curY -= rise
 
 		w := 55.0
 		h := 65.0
 
-		spread := float64(i) * 0.1
+		spread := float64(l.index) * 0.1
 		var px float64
 		base := 150.0 + spread
 		jitterX := (rand.Float64() - 0.5) * 30.0
-		if goRight {
+		if l.goRight {
 			px = base - w/2 + jitterX
 		} else {
 			px = -base - w/2 + jitterX
@@ -46,13 +45,12 @@ func (l *Level) generate() {
 
 		l.Platforms = append(l.Platforms, Platform{
 			X: px,
-			Y: curY + jitterY,
+			Y: l.curY + jitterY,
 			W: w,
 			H: h,
 		})
 
-		goRight = !goRight
+		l.goRight = !l.goRight
+		l.index++
 	}
-
-	l.Height = curY - 200
 }

@@ -23,6 +23,8 @@ func (g *Game) Update() error {
 	if ebiten.IsKeyPressed(ebiten.KeyDown) {
 		g.cameraY += 5
 	}
+	g.level.GenerateUntil(g.cameraY - 1000)
+
 	return nil
 }
 
