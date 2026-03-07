@@ -4,6 +4,11 @@ const (
 	ScreenWidth  = 1280
 	ScreenHeight = 720
 
+	IceSlideSpeed  = 1.8
+	BouncyReflect  = 0.85
+	StickyDashMult = 0.5
+	CrumbleTime    = 1.0
+
 	PixelsPerMeter = 100.0
 
 	Gravity      = 0.35

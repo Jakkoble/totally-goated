@@ -11,22 +11,56 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
-var rockTiles [10]*ebiten.Image
+var (
+	rockTiles    [10]*ebiten.Image
+	bouncyTiles  [10]*ebiten.Image
+	iceTiles     [10]*ebiten.Image
+	crumblyTiles [10]*ebiten.Image
+	stickyTiles  [10]*ebiten.Image
+)
 
 func init() {
-	for i := 0; i < 10; i++ {
-		path := fmt.Sprintf("assets/rock_tile_%d.png", i+1)
+	loadTileSet(rockTiles[:], "assets/rock_tile_%d.png")
+	loadTileSet(bouncyTiles[:], "assets/bouncy_tile_%d.png")
+	loadTileSet(iceTiles[:], "assets/ice_tile_%d.png")
+	loadTileSet(crumblyTiles[:], "assets/crumbly_tile_%d.png")
+	loadTileSet(stickyTiles[:], "assets/sticky_tile_%d.png")
+}
+
+func loadTileSet(tiles []*ebiten.Image, pattern string) {
+	for i := range tiles {
+		path := fmt.Sprintf(pattern, i+1)
 		img, _, err := ebitenutil.NewImageFromFile(path)
 		if err != nil {
-			log.Fatalf("failed to load %s: %v", path, err)
+			if rockTiles[i] != nil {
+				tiles[i] = rockTiles[i]
+			} else {
+				log.Fatalf("failed to load %s: %v", path, err)
+			}
+			continue
 		}
-		rockTiles[i] = img
+		tiles[i] = img
 	}
 }
 
+type PlatformType int
+
+const (
+	PlatNormal PlatformType = iota
+	PlatBouncy
+	PlatIce
+	PlatCrumbly
+	PlatSticky
+)
+
 type Platform struct {
 	X, Y, W, H float64
-	TileIndex   int
+	TileIndex  int
+	Type       PlatformType
+
+	CrumbleTimer   float64
+	CrumbleStarted bool
+	Destroyed      bool
 }
 
 type Level struct {
@@ -76,12 +110,28 @@ func (l *Level) GenerateUntil(targetY float64) {
 			px = -base - w/2 + jitterX
 		}
 
+		platType := PlatNormal
+		if l.index > 5 {
+			roll := rand.Float64()
+			switch {
+			case roll < 0.12:
+				platType = PlatBouncy
+			case roll < 0.24:
+				platType = PlatIce
+			case roll < 0.36:
+				platType = PlatCrumbly
+			case roll < 0.44:
+				platType = PlatSticky
+			}
+		}
+
 		p := Platform{
 			X:         px,
 			Y:         l.curY,
 			W:         w,
 			H:         h,
 			TileIndex: tileIdx,
+			Type:      platType,
 		}
 
 		if !l.overlaps(p) {
@@ -100,10 +150,26 @@ func (l *Level) Draw(screen *ebiten.Image, cameraY float64) {
 	offsetY := float64(ScreenHeight)/2 - cameraY
 
 	for _, p := range l.Platforms {
+		if p.Destroyed {
+			continue
+		}
 		sx := p.X + offsetX
 		sy := p.Y + offsetY
 
-		tile := rockTiles[p.TileIndex]
+		var tile *ebiten.Image
+		switch p.Type {
+		case PlatBouncy:
+			tile = bouncyTiles[p.TileIndex]
+		case PlatIce:
+			tile = iceTiles[p.TileIndex]
+		case PlatCrumbly:
+			tile = crumblyTiles[p.TileIndex]
+		case PlatSticky:
+			tile = stickyTiles[p.TileIndex]
+		default:
+			tile = rockTiles[p.TileIndex]
+		}
+
 		tw, th := tile.Bounds().Dx(), tile.Bounds().Dy()
 
 		cropW := int(p.W)
@@ -120,5 +186,18 @@ func (l *Level) Draw(screen *ebiten.Image, cameraY float64) {
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(sx, sy)
 		screen.DrawImage(sub, op)
+	}
+}
+
+func (l *Level) Update() {
+	dt := 1.0 / 60.0
+	for i := range l.Platforms {
+		p := &l.Platforms[i]
+		if p.Type == PlatCrumbly && p.CrumbleStarted && !p.Destroyed {
+			p.CrumbleTimer += dt
+			if p.CrumbleTimer >= CrumbleTime {
+				p.Destroyed = true
+			}
+		}
 	}
 }
