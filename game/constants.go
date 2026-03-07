@@ -4,11 +4,11 @@ const (
 	ScreenWidth  = 1280
 	ScreenHeight = 720
 
-	Gravity      = 0.1
-	MaxFallSpeed = 8.0
+	Gravity      = 0.22
+	MaxFallSpeed = 9.5
 
-	WallSlideSpeed = 0.2
-	DashDrag       = 0.96
+	WallSlideSpeed = 0.55
+	DashDrag       = 0.985
 
 	FullChargeTime = 1.0
 	DashMinSpeed   = 8.0
