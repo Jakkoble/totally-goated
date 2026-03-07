@@ -14,5 +14,8 @@ const (
 	DashMinSpeed   = 8.0
 	DashMaxSpeed   = 20.0
 
+	AirControlAccel = 0.15
+	AirControlMax   = 2.5
+
 	DeathMargin = 400.0
 )
