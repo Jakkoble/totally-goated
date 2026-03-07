@@ -144,6 +144,17 @@ func (g *Goat) updateCharging(level *Level, cameraY float64) {
 
 		speed := Lerp(DashMinSpeed, DashMaxSpeed, g.ChargingPercentage())
 		speed *= g.DashSpeedMod
+		pct := g.ChargingPercentage()
+		switch {
+		case pct > 0.8:
+			sfxDashPower15.Play()
+		case pct > 0.4:
+			sfxDashPower10.Play()
+		default:
+			sfxDashPower5.Play()
+		}
+		sfxChargeRelease.Play()
+
 		g.Vel = dir.Scale(speed)
 		g.State = StateAir
 		g.Wall = WallNone
@@ -232,6 +243,7 @@ func (g *Goat) attachToWall(side WallSide, platIdx int, level *Level) {
 	p := &level.Platforms[platIdx]
 
 	if p.Type == PlatBouncy {
+		sfxBounce.Play()
 		if side == WallLeft || side == WallRight {
 			g.Vel.X = -g.Vel.X * BouncyReflect
 		}
@@ -244,13 +256,22 @@ func (g *Goat) attachToWall(side WallSide, platIdx int, level *Level) {
 		return
 	}
 
+	switch p.Type {
+	case PlatIce:
+		sfxIce.Play()
+	case PlatCrumbly:
+		if !p.CrumbleStarted {
+			p.CrumbleStarted = true
+			sfxCrumble.Play()
+		}
+		sfxWallHit.Play()
+	default:
+		sfxWallHit.Play()
+	}
+
 	g.DashSpeedMod = 1.0
 	if p.Type == PlatSticky {
 		g.DashSpeedMod = StickyDashMult
-	}
-
-	if p.Type == PlatCrumbly && !p.CrumbleStarted {
-		p.CrumbleStarted = true
 	}
 
 	g.State = StateWall

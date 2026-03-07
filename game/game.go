@@ -66,7 +66,12 @@ func (g *Game) Update() error {
 
 		height := -g.Goat.Pos.Y
 		if height > g.score {
+			oldMeters := int(g.score / PixelsPerMeter)
 			g.score = height
+			newMeters := int(g.score / PixelsPerMeter)
+			if newMeters/50 > oldMeters/50 {
+				sfxMilestone.Play()
+			}
 		}
 
 		targetY := g.Goat.Pos.Y
@@ -77,6 +82,7 @@ func (g *Game) Update() error {
 
 		deathY := g.cameraY + DeathMargin
 		if g.Goat.Pos.Y > deathY {
+			sfxDeath.Play()
 			if g.score > g.bestScore {
 				g.bestScore = g.score
 				saveBest(g.bestScore)
