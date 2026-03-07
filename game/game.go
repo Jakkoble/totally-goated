@@ -22,6 +22,7 @@ type Game struct {
 	score      float64
 	bestScore  float64
 	background *ebiten.Image
+	stars      *Starfield
 }
 
 type GameState int
@@ -42,6 +43,7 @@ func NewGame() *Game {
 		menuGoat:   img,
 		bestScore:  s.BestScore,
 		background: background,
+		stars:      NewStarfield(),
 	}
 }
 
@@ -108,6 +110,7 @@ func (g *Game) Update() error {
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{R: 30, G: 30, B: 50, A: 255})
+	g.stars.Draw(screen, g.tick)
 	g.drawBackground(screen)
 
 	switch g.state {
