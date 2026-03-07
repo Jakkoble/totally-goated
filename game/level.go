@@ -91,17 +91,25 @@ func (l *Level) overlaps(p Platform) bool {
 
 func (l *Level) GenerateUntil(targetY float64) {
 	for l.curY > targetY {
-		w := 40.0 + rand.Float64()*80.0
-		h := 60.0 + rand.Float64()*70.0
+		diff := l.difficulty()
+
+		maxW := Lerp(80.0, 65.0, diff)
+		minW := Lerp(40.0, 35.0, diff)
+		w := minW + rand.Float64()*(maxW-minW)
+
+		maxH := Lerp(70.0, 55.0, diff)
+		minH := Lerp(60.0, 50.0, diff)
+		h := minH + rand.Float64()*(maxH-minH)
+
 		tileIdx := rand.IntN(10)
 
-		// Vertical gap: -30 to +30 px between consecutive platforms
-		gap := -30.0 + rand.Float64()*60.0
+		gapExtra := diff * 15.0
+		gap := -30.0 + rand.Float64()*(60.0+gapExtra)
 		l.curY -= h + gap
 
-		spread := float64(l.index) * 0.1
+		spread := float64(l.index)*0.1 + diff*30.0
 		base := 130.0 + spread
-		jitterX := (rand.Float64() - 0.5) * 30.0
+		jitterX := (rand.Float64() - 0.5) * (30.0 + diff*20.0)
 
 		var px float64
 		if l.goRight {
@@ -111,17 +119,27 @@ func (l *Level) GenerateUntil(targetY float64) {
 		}
 
 		platType := PlatNormal
-		if l.index > 5 {
+		if l.index > 15 {
+			specialChance := 0.10 + diff*0.35
 			roll := rand.Float64()
-			switch {
-			case roll < 0.12:
-				platType = PlatBouncy
-			case roll < 0.24:
-				platType = PlatIce
-			case roll < 0.36:
-				platType = PlatCrumbly
-			case roll < 0.44:
-				platType = PlatSticky
+			bouncyEnd := 0.03 + diff*0.05
+			iceEnd := bouncyEnd + 0.03 + diff*0.05
+			crumblyEnd := iceEnd + 0.02 + diff*0.08
+			stickyEnd := crumblyEnd + 0.02 + diff*0.07
+
+			if roll < specialChance {
+				switch {
+				case roll < bouncyEnd:
+					platType = PlatBouncy
+				case roll < iceEnd:
+					platType = PlatIce
+				case roll < crumblyEnd:
+					platType = PlatCrumbly
+				default:
+					if roll < stickyEnd {
+						platType = PlatSticky
+					}
+				}
 			}
 		}
 
@@ -200,4 +218,16 @@ func (l *Level) Update() {
 			}
 		}
 	}
+}
+
+/*
+0-10m normal
+~10m special tiles 13%
+~35m 19% special tiles, tiles get smaller
+~70m 28% special tiles, tiles get smaller and more spread out
+~110m 36% special tiles
+~150m 45% special tiles, smallest tiles, most spread out
+*/
+func (l *Level) difficulty() float64 {
+	return Clamp(float64(l.index)/200.0, 0, 1)
 }
