@@ -94,18 +94,19 @@ func (l *Level) GenerateUntil(targetY float64) {
 	for l.curY > targetY {
 		diff := l.difficulty()
 
-		maxW := Lerp(80.0, 65.0, diff)
-		minW := Lerp(40.0, 35.0, diff)
+		maxW := Lerp(90.0, 55.0, diff)
+		minW := Lerp(50.0, 30.0, diff)
 		w := minW + rand.Float64()*(maxW-minW)
 
-		maxH := Lerp(70.0, 55.0, diff)
-		minH := Lerp(60.0, 50.0, diff)
+		maxH := Lerp(160.0, 50.0, diff)
+		minH := Lerp(120.0, 35.0, diff)
 		h := minH + rand.Float64()*(maxH-minH)
 
 		tileIdx := rand.IntN(10)
 
-		gapExtra := diff * 15.0
-		gap := -30.0 + rand.Float64()*(60.0+gapExtra)
+		gapMin := Lerp(-30.0, 20.0, diff)
+		gapRange := Lerp(50.0, 60.0, diff)
+		gap := gapMin + rand.Float64()*gapRange
 		l.curY -= h + gap
 
 		spread := float64(l.index)*0.1 + diff*30.0
@@ -120,13 +121,13 @@ func (l *Level) GenerateUntil(targetY float64) {
 		}
 
 		platType := PlatNormal
-		if l.index > 15 {
-			specialChance := 0.10 + diff*0.35
+		if l.index > 10 {
+			specialChance := 0.08 + diff*0.52
 			roll := rand.Float64()
-			bouncyEnd := 0.03 + diff*0.05
-			iceEnd := bouncyEnd + 0.03 + diff*0.05
-			crumblyEnd := iceEnd + 0.02 + diff*0.08
-			stickyEnd := crumblyEnd + 0.02 + diff*0.07
+			bouncyEnd := 0.03 + diff*0.08
+			iceEnd := bouncyEnd + 0.03 + diff*0.08
+			crumblyEnd := iceEnd + 0.02 + diff*0.12
+			stickyEnd := crumblyEnd + 0.02 + diff*0.10
 
 			if roll < specialChance {
 				switch {
@@ -240,12 +241,11 @@ func (l *Level) Update() {
 }
 
 /*
-0-10m normal
-~10m special tiles 13%
-~35m 19% special tiles, tiles get smaller
-~70m 28% special tiles, tiles get smaller and more spread out
-~110m 36% special tiles
-~150m 45% special tiles, smallest tiles, most spread out
+0m:   normal, very tall (120-160px), small gaps
+~50m:  special tiles start appearing (~8%)
+~250m: ~30% special, platforms shrinking, gaps growing
+~400m: ~45% special, platforms noticeably smaller
+~500m: ~60% special, smallest platforms (35-50px), largest gaps
 */
 func (l *Level) powerUpOverlapsPlatform(x, y float64) bool {
 	for _, p := range l.Platforms {
@@ -258,5 +258,5 @@ func (l *Level) powerUpOverlapsPlatform(x, y float64) bool {
 }
 
 func (l *Level) difficulty() float64 {
-	return Clamp(float64(l.index)/200.0, 0, 1)
+	return Clamp(-l.curY/(500.0*PixelsPerMeter), 0, 1)
 }
