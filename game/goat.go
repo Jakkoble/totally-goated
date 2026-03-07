@@ -71,6 +71,13 @@ func (g *Goat) updateAir(level *Level) {
 		g.Vel.Y = MaxFallSpeed
 	}
 
+	if ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyLeft) {
+		g.Vel.X -= AirControlAccel
+	}
+	if ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyRight) {
+		g.Vel.X += AirControlAccel
+	}
+
 	g.Vel.X *= DashDrag
 
 	g.Pos = g.Pos.Add(g.Vel)
