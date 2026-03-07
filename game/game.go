@@ -23,6 +23,7 @@ type Game struct {
 	bestScore  float64
 	background *ebiten.Image
 	stars      *Starfield
+	speedLines *SpeedLines
 }
 
 type GameState int
@@ -44,6 +45,7 @@ func NewGame() *Game {
 		bestScore:  s.BestScore,
 		background: background,
 		stars:      NewStarfield(),
+		speedLines: &SpeedLines{},
 	}
 }
 
@@ -69,6 +71,7 @@ func (g *Game) Update() error {
 	case GamePlaying:
 		g.Goat.Update(g.level, g.cameraY)
 		g.level.Update()
+		g.speedLines.Update(g.Goat.Vel)
 
 		height := -g.Goat.Pos.Y
 		if height > g.score {
@@ -219,6 +222,7 @@ func (g *Game) drawMenu(screen *ebiten.Image) {
 func (g *Game) drawGame(screen *ebiten.Image) {
 	g.level.Draw(screen, g.cameraY)
 	g.Goat.Draw(screen, g.cameraY)
+	g.speedLines.Draw(screen)
 
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d m", g.currentMeters()), 10, 10)
 }
