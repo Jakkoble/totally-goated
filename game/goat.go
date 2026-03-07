@@ -251,11 +251,29 @@ func (g *Goat) attachToWall(side WallSide, platIdx int, level *Level) {
 	if p.Type == PlatBouncy {
 		sfxBounce.Play()
 		if side == WallLeft || side == WallRight {
+			extra := math.Abs(g.Vel.Y) * BouncySideAbsorb
 			g.Vel.X = -g.Vel.X * BouncyReflect
-		}
-		if g.Vel.Y > 0 {
+			if g.Vel.X < 0 {
+				g.Vel.X -= extra
+			} else {
+				g.Vel.X += extra
+			}
+			if math.Abs(g.Vel.X) < BouncyMinSpeed {
+				if g.Vel.X < 0 {
+					g.Vel.X = -BouncyMinSpeed
+				} else {
+					g.Vel.X = BouncyMinSpeed
+				}
+			}
+
+			g.Vel.Y *= 0.3
+		} else if g.Vel.Y > 0 {
 			g.Vel.Y = -g.Vel.Y * BouncyReflect
+			if g.Vel.Y > -BouncyMinSpeed {
+				g.Vel.Y = -BouncyMinSpeed
+			}
 		}
+
 		g.State = StateAir
 		g.Wall = WallNone
 		g.WallPlatIdx = -1
@@ -386,7 +404,7 @@ func (g *Goat) drawDashAimLine(screen *ebiten.Image, offsetX, offsetY, cameraY f
 	endX := sx + dir.X*lineLen
 	endY := sy + dir.Y*lineLen
 
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		t1 := float64(i) / 8.0
 		t2 := (float64(i) + 0.5) / 8.0
 		x1 := sx + (endX-sx)*t1
@@ -440,7 +458,7 @@ func (g *Goat) drawDashTrajectory(screen *ebiten.Image, offsetX, offsetY, camera
 	vel := dir.Scale(speed)
 	pos := g.Pos
 
-	for i := 0; i < 40; i++ {
+	for i := range 40 {
 		pos = pos.Add(vel)
 		vel = vel.Scale(DashDrag)
 

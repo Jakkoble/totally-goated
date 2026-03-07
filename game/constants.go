@@ -5,7 +5,9 @@ const (
 	ScreenHeight = 720
 
 	IceSlideSpeed  = 1.8
-	BouncyReflect  = 0.85
+	BouncyReflect      = 1.2
+	BouncyMinSpeed     = 8.0
+	BouncySideAbsorb   = 0.5
 	StickyDashMult = 0.5
 	CrumbleTime    = 1.0
 
