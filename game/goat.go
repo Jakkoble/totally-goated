@@ -40,6 +40,7 @@ type Goat struct {
 	DashSpeedMod float64
 
 	ChargeTime float64
+	Particles  ParticleSystem
 }
 
 func NewGoat(x, y float64) *Goat {
@@ -64,6 +65,12 @@ func (g *Goat) Update(level *Level, cameraY float64) {
 		g.updateWall(level)
 	case StateCharging:
 		g.updateCharging(level, cameraY)
+	}
+
+	g.Particles.Update()
+
+	if g.State == StateAir {
+		g.Particles.Emit(g.Pos, g.Vel)
 	}
 }
 
@@ -294,6 +301,8 @@ func (g *Goat) detachFromWall() {
 }
 
 func (g *Goat) Draw(screen *ebiten.Image, cameraY float64) {
+	g.Particles.Draw(screen, cameraY)
+
 	offsetX := float64(ScreenWidth) / 2
 	offsetY := float64(ScreenHeight)/2 - cameraY
 
