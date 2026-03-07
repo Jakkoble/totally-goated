@@ -9,7 +9,7 @@ const (
 	StickyDashMult = 0.5
 	CrumbleTime    = 1.0
 
-	PixelsPerMeter = 100.0
+	PixelsPerMeter = 30.0
 
 	Gravity      = 0.35
 	DashDrag     = 0.965

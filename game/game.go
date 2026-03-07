@@ -12,15 +12,18 @@ import (
 )
 
 type Game struct {
-	level     *Level
-	cameraY   float64
-	Goat      Goat
-	state     GameState
-	menuPulse float64
-	tick      int
-	menuGoat  *ebiten.Image
-	score     float64
-	bestScore float64
+	level      *Level
+	cameraY    float64
+	Goat       Goat
+	state      GameState
+	menuPulse  float64
+	tick       int
+	menuGoat   *ebiten.Image
+	score      float64
+	bestScore  float64
+	background *ebiten.Image
+	stars      *Starfield
+	speedLines *SpeedLines
 }
 
 type GameState int
@@ -33,11 +36,16 @@ const (
 
 func NewGame() *Game {
 	img, _, _ := ebitenutil.NewImageFromFile("assets/goat.png")
+	background, _, _ := ebitenutil.NewImageFromFile("assets/background.png")
+
 	s := loadSave()
 	return &Game{
-		state:     GameMenu,
-		menuGoat:  img,
-		bestScore: s.BestScore,
+		state:      GameMenu,
+		menuGoat:   img,
+		bestScore:  s.BestScore,
+		background: background,
+		stars:      NewStarfield(),
+		speedLines: &SpeedLines{},
 	}
 }
 
@@ -63,6 +71,7 @@ func (g *Game) Update() error {
 	case GamePlaying:
 		g.Goat.Update(g.level, g.cameraY)
 		g.level.Update()
+		g.speedLines.Update(g.Goat.Vel)
 
 		height := -g.Goat.Pos.Y
 		if height > g.score {
@@ -103,9 +112,12 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	screen.Fill(color.RGBA{R: 30, G: 30, B: 50, A: 255})
+	g.stars.Draw(screen, g.tick)
+	g.drawBackground(screen)
+
 	switch g.state {
 	case GameMenu:
-		screen.Fill(color.RGBA{R: 30, G: 30, B: 50, A: 255})
 		g.drawMenu(screen)
 	case GamePlaying:
 		g.drawGame(screen)
@@ -113,6 +125,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.drawGame(screen)
 		g.drawGameOver(screen)
 	}
+}
+
+func (g *Game) drawBackground(screen *ebiten.Image) {
+	if g.background == nil {
+		return
+	}
+	imgW := float64(g.background.Bounds().Dx())
+	imgH := float64(g.background.Bounds().Dy())
+	scaleX := float64(ScreenWidth) / imgW
+	scaleY := scaleX
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(scaleX, scaleY)
+	op.GeoM.Translate(0, float64(ScreenHeight)-imgH*scaleY)
+	screen.DrawImage(g.background, op)
 }
 
 func (g *Game) drawMenu(screen *ebiten.Image) {
@@ -196,6 +222,7 @@ func (g *Game) drawMenu(screen *ebiten.Image) {
 func (g *Game) drawGame(screen *ebiten.Image) {
 	g.level.Draw(screen, g.cameraY)
 	g.Goat.Draw(screen, g.cameraY)
+	g.speedLines.Draw(screen)
 
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d m", g.currentMeters()), 10, 10)
 }

@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"image/color"
 	"log"
 	"math"
@@ -40,6 +39,7 @@ type Goat struct {
 	DashSpeedMod float64
 
 	ChargeTime float64
+	Particles  ParticleSystem
 }
 
 func NewGoat(x, y float64) *Goat {
@@ -64,6 +64,12 @@ func (g *Goat) Update(level *Level, cameraY float64) {
 		g.updateWall(level)
 	case StateCharging:
 		g.updateCharging(level, cameraY)
+	}
+
+	g.Particles.Update()
+
+	if g.State == StateAir {
+		g.Particles.Emit(g.Pos, g.Vel)
 	}
 }
 
@@ -294,11 +300,12 @@ func (g *Goat) detachFromWall() {
 }
 
 func (g *Goat) Draw(screen *ebiten.Image, cameraY float64) {
+	g.Particles.Draw(screen, cameraY)
+
 	offsetX := float64(ScreenWidth) / 2
 	offsetY := float64(ScreenHeight)/2 - cameraY
 
 	if g.State == StateCharging {
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Charge %d%%", int(g.ChargingPercentage()*100)), 0, 0)
 		g.drawDashAimLine(screen, offsetX, offsetY, cameraY)
 		g.drawDashTrajectory(screen, offsetX, offsetY, cameraY)
 		g.drawChargeCircle(screen, offsetX, offsetY)
