@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"image/color"
 	"math"
 
@@ -18,6 +19,8 @@ type Game struct {
 	menuPulse float64
 	tick      int
 	menuGoat  *ebiten.Image
+	score     float64
+	bestScore float64
 }
 
 type GameState int
@@ -30,9 +33,11 @@ const (
 
 func NewGame() *Game {
 	img, _, _ := ebitenutil.NewImageFromFile("assets/goat.png")
+	s := loadSave()
 	return &Game{
-		state:    GameMenu,
-		menuGoat: img,
+		state:     GameMenu,
+		menuGoat:  img,
+		bestScore: s.BestScore,
 	}
 }
 
@@ -40,6 +45,7 @@ func (g *Game) startGame() {
 	g.level = NewLevel()
 	g.Goat = *NewGoat(0, 0)
 	g.cameraY = 0
+	g.score = 0
 	g.state = GamePlaying
 }
 
@@ -57,6 +63,11 @@ func (g *Game) Update() error {
 	case GamePlaying:
 		g.Goat.Update(g.level, g.cameraY)
 
+		height := -g.Goat.Pos.Y
+		if height > g.score {
+			g.score = height
+		}
+
 		targetY := g.Goat.Pos.Y
 		if targetY < g.cameraY {
 			lerpSpeed := 0.08
@@ -65,6 +76,10 @@ func (g *Game) Update() error {
 
 		deathY := g.cameraY + DeathMargin
 		if g.Goat.Pos.Y > deathY {
+			if g.score > g.bestScore {
+				g.bestScore = g.score
+				saveBest(g.bestScore)
+			}
 			g.state = GameOver
 		}
 
@@ -183,14 +198,20 @@ func (g *Game) drawGame(screen *ebiten.Image) {
 	}
 
 	g.Goat.Draw(screen, g.cameraY)
+
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d m", g.currentMeters()), 10, 10)
 }
 
 func (g *Game) drawGameOver(screen *ebiten.Image) {
 	vector.FillRect(screen, 0, 0, float32(ScreenWidth), float32(ScreenHeight),
 		color.RGBA{0, 0, 0, 150}, false)
-	ebitenutil.DebugPrintAt(screen, "GAME OVER", ScreenWidth/2-36, ScreenHeight/2-20)
+	ebitenutil.DebugPrintAt(screen, "GAME OVER", ScreenWidth/2-36, ScreenHeight/2-30)
+
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Height: %d m", g.currentMeters()), ScreenWidth/2-50, ScreenHeight/2-10)
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Best: %d m", g.bestMeters()), ScreenWidth/2-40, ScreenHeight/2+6)
+
 	if g.tick%60 < 40 {
-		ebitenutil.DebugPrintAt(screen, "Click or Space to continue", ScreenWidth/2-100, ScreenHeight/2+10)
+		ebitenutil.DebugPrintAt(screen, "Click or Space to continue", ScreenWidth/2-100, ScreenHeight/2+30)
 	}
 }
 
@@ -200,4 +221,16 @@ func drawBackground(screen *ebiten.Image) {
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return ScreenWidth, ScreenHeight
+}
+
+func toMeters(px float64) int {
+	return int(px / PixelsPerMeter)
+}
+
+func (g *Game) currentMeters() int {
+	return toMeters(g.score)
+}
+
+func (g *Game) bestMeters() int {
+	return toMeters(g.bestScore)
 }
