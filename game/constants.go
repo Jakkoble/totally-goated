@@ -13,4 +13,6 @@ const (
 	FullChargeTime = 1.0
 	DashMinSpeed   = 8.0
 	DashMaxSpeed   = 20.0
+
+	DeathMargin = 400.0
 )
