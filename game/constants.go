@@ -4,6 +4,8 @@ const (
 	ScreenWidth  = 1280
 	ScreenHeight = 720
 
+	PixelsPerMeter = 100.0
+
 	Gravity      = 0.22
 	MaxFallSpeed = 9.5
 
