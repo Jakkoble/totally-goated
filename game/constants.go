@@ -8,6 +8,9 @@ const (
 	MaxFallSpeed = 8.0
 
 	WallSlideSpeed = 0.2
-	DashSpeed      = 20.0
 	DashDrag       = 0.96
+
+	FullChargeTime = 1.0
+	DashMinSpeed   = 8.0
+	DashMaxSpeed   = 20.0
 )

@@ -1,12 +1,15 @@
 package game
 
 import (
+	"fmt"
+	"image/color"
 	"log"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 type GoatState int
@@ -14,7 +17,7 @@ type GoatState int
 const (
 	StateAir GoatState = iota
 	StateWall
-	StateDashing
+	StateCharging
 )
 
 type WallSide int
@@ -34,6 +37,8 @@ type Goat struct {
 	ClingTimer  int
 	FacingDir   float64
 	Image       *ebiten.Image
+
+	ChargeTime float64
 }
 
 func NewGoat(x, y float64) *Goat {
@@ -54,9 +59,9 @@ func (g *Goat) Update(level *Level, cameraY float64) {
 	case StateAir:
 		g.updateAir(level)
 	case StateWall:
-		g.updateWall(level, cameraY)
-	case StateDashing:
-		g.updateDashing(level)
+		g.updateWall(level)
+	case StateCharging:
+		g.updateCharging(level, cameraY)
 	}
 }
 
@@ -66,21 +71,16 @@ func (g *Goat) updateAir(level *Level) {
 		g.Vel.Y = MaxFallSpeed
 	}
 
+	g.Vel.X *= DashDrag
+
 	g.Pos = g.Pos.Add(g.Vel)
 	g.resolveCollisions(level)
 }
 
-func (g *Goat) updateWall(level *Level, cameraY float64) {
+func (g *Goat) updateWall(level *Level) {
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		mx, my := ebiten.CursorPosition()
-		worldX := float64(mx) - float64(ScreenWidth)/2
-		worldY := float64(my) - float64(ScreenHeight)/2 + cameraY
-		dir := (Vec2{worldX, worldY}).Sub(g.Pos).Normalize()
-
-		g.Vel = dir.Scale(DashSpeed)
-		g.State = StateDashing
-		g.Wall = WallNone
-		g.WallPlatIdx = -1
+		g.State = StateCharging
+		g.ChargeTime = 0
 		return
 	}
 
@@ -89,6 +89,37 @@ func (g *Goat) updateWall(level *Level, cameraY float64) {
 	g.Pos.Y += g.Vel.Y
 	g.ClingTimer++
 
+	g.checkStillOnWall(level)
+}
+
+func (g *Goat) updateCharging(level *Level, cameraY float64) {
+	dt := 1.0 / float64(ebiten.TPS())
+	g.ChargeTime += dt
+	if g.ChargeTime > FullChargeTime {
+		g.ChargeTime = FullChargeTime
+	}
+
+	g.Pos.Y += WallSlideSpeed
+	g.ClingTimer++
+
+	if !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		mx, my := ebiten.CursorPosition()
+		worldX := float64(mx) - float64(ScreenWidth)/2
+		worldY := float64(my) - float64(ScreenHeight)/2 + cameraY
+		dir := (Vec2{worldX, worldY}).Sub(g.Pos).Normalize()
+
+		speed := Lerp(DashMinSpeed, DashMaxSpeed, g.ChargingPercentage())
+		g.Vel = dir.Scale(speed)
+		g.State = StateAir
+		g.Wall = WallNone
+		g.WallPlatIdx = -1
+		return
+	}
+
+	g.checkStillOnWall(level)
+}
+
+func (g *Goat) checkStillOnWall(level *Level) {
 	gh := float64(g.Image.Bounds().Dy())
 	if g.WallPlatIdx >= 0 && g.WallPlatIdx < len(level.Platforms) {
 		p := &level.Platforms[g.WallPlatIdx]
@@ -99,17 +130,6 @@ func (g *Goat) updateWall(level *Level, cameraY float64) {
 	} else {
 		g.detachFromWall()
 	}
-}
-
-func (g *Goat) updateDashing(level *Level) {
-	g.Pos = g.Pos.Add(g.Vel)
-	g.Vel = g.Vel.Scale(DashDrag)
-
-	if g.Vel.Len() < 3.0 {
-		g.State = StateAir
-	}
-
-	g.resolveCollisions(level)
 }
 
 func (g *Goat) resolveCollisions(level *Level) {
@@ -190,11 +210,59 @@ func (g *Goat) detachFromWall() {
 }
 
 func (g *Goat) Draw(screen *ebiten.Image, cameraY float64) {
-	op := &ebiten.DrawImageOptions{}
 	offsetX := float64(ScreenWidth) / 2
 	offsetY := float64(ScreenHeight)/2 - cameraY
+
+	if g.State == StateCharging {
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Charge %d%%", int(g.ChargingPercentage()*100)), 0, 0)
+		g.drawChargeCircle(screen, offsetX, offsetY)
+		g.drawChargeBar(screen, offsetX, offsetY)
+	}
+
+	op := &ebiten.DrawImageOptions{}
 	iw := float64(g.Image.Bounds().Dx())
 	ih := float64(g.Image.Bounds().Dy())
 	op.GeoM.Translate(g.Pos.X-iw/2+offsetX, g.Pos.Y-ih/2+offsetY)
 	screen.DrawImage(g.Image, op)
+}
+
+func (g *Goat) ChargingPercentage() float64 {
+	return Clamp(g.ChargeTime/FullChargeTime, 0, 1)
+}
+
+func (g *Goat) drawChargeBar(screen *ebiten.Image, offsetX, offsetY float64) {
+	pct := g.ChargingPercentage()
+
+	barW := float32(60)
+	barH := float32(5)
+	barX := float32(g.Pos.X+offsetX) - barW/2
+	barY := float32(g.Pos.Y+offsetY) + float32(g.Image.Bounds().Dy())/2 + 10
+
+	vector.FillRect(screen, barX, barY, barW, barH, color.RGBA{50, 50, 50, 200}, false)
+
+	fillColor := chargingColor(pct)
+	vector.FillRect(screen, barX, barY, barW*float32(pct), barH, fillColor, false)
+	vector.StrokeRect(screen, barX, barY, barW, barH, 1, color.RGBA{255, 255, 255, 255}, false)
+}
+
+func (g *Goat) drawChargeCircle(screen *ebiten.Image, offsetX, offsetY float64) {
+	pct := g.ChargingPercentage()
+
+	cx := float32(g.Pos.X + offsetX)
+	cy := float32(g.Pos.Y + offsetY)
+
+	fillColor := chargingColor(pct)
+	fillColor.A = 100
+
+	bounds := g.Image.Bounds()
+	maxDimension := max(bounds.Dx(), bounds.Dy())
+	radius := Lerp(float64(maxDimension)*.8, float64(maxDimension)*1.5, pct)
+
+	vector.FillCircle(screen, cx, cy, float32(radius), fillColor, true)
+}
+
+func chargingColor(pct float64) color.NRGBA {
+	r := uint8(pct * 255)
+	g := uint8((1 - pct) * 255)
+	return color.NRGBA{r, g, 0, 255}
 }
