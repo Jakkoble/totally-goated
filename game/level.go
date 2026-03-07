@@ -3,7 +3,6 @@ package game
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"log"
 	"math/rand/v2"
 
@@ -162,7 +161,6 @@ func (l *Level) GenerateUntil(targetY float64) {
 }
 
 func (l *Level) Draw(screen *ebiten.Image, cameraY float64) {
-	screen.Fill(color.RGBA{R: 30, G: 30, B: 50, A: 255})
 
 	offsetX := float64(ScreenWidth) / 2
 	offsetY := float64(ScreenHeight)/2 - cameraY
