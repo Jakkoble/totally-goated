@@ -10,13 +10,19 @@ import (
 type Game struct {
 	level   *Level
 	cameraY float64
+	Goat Goat
 }
 
 func NewGame() *Game {
-	return &Game{level: NewLevel()}
+	return &Game{
+		level: NewLevel(),
+		Goat: *NewGoat(0, 0),
+	}
 }
 
 func (g *Game) Update() error {
+	g.Goat.Update()
+
 	if ebiten.IsKeyPressed(ebiten.KeyUp) {
 		g.cameraY -= 5
 	}
@@ -29,7 +35,6 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-
 	offsetX := float64(ScreenWidth) / 2
 	offsetY := float64(ScreenHeight)/2 - g.cameraY
 
@@ -38,6 +43,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		sy := float32(p.Y + offsetY)
 		vector.FillRect(screen, sx, sy, float32(p.W), float32(p.H), color.White, false)
 	}
+
+	g.Goat.Draw(screen)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
