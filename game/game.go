@@ -62,6 +62,7 @@ func (g *Game) Update() error {
 
 	case GamePlaying:
 		g.Goat.Update(g.level, g.cameraY)
+		g.level.Update()
 
 		height := -g.Goat.Pos.Y
 		if height > g.score {
