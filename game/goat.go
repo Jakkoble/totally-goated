@@ -121,6 +121,7 @@ func (g *Goat) updateAir(level *Level, game *Game) {
 
 	g.Pos = g.Pos.Add(g.Vel)
 	g.collectPowerUps(level)
+	g.collectBells(level, game)
 	g.resolveCollisions(level, game)
 }
 
@@ -149,6 +150,28 @@ func (g *Goat) collectPowerUps(level *Level) {
 				g.SlowFallTimer = SlowFallDuration
 			case PowerUpDoubleJump:
 				g.HasDoubleJump = true
+			}
+		}
+	}
+}
+
+func (g *Goat) collectBells(level *Level, game *Game) {
+	gw := float64(g.Image.Bounds().Dx())
+	gh := float64(g.Image.Bounds().Dy())
+
+	for i := range level.Bells {
+		b := &level.Bells[i]
+		if b.Collected {
+			continue
+		}
+
+		dx := b.Pos.X - Clamp(b.Pos.X, g.Pos.X-gw/2, g.Pos.X+gw/2)
+		dy := b.Pos.Y - Clamp(b.Pos.Y, g.Pos.Y-gh/2, g.Pos.Y+gh/2)
+		if dx*dx+dy*dy < BellRadius*BellRadius {
+			b.Collected = true
+			sfxBellPickup.Play()
+			if game != nil {
+				game.bellCount++
 			}
 		}
 	}
