@@ -226,15 +226,12 @@ func (g *Game) drawMenu(screen *ebiten.Image) {
 
 	titleY := int(sh * 0.05)
 	for i, line := range title {
-		textW := len(line) * 6
-		x := int(sw)/2 - textW/2
-		ebitenutil.DebugPrintAt(screen, line, x, titleY+i*16)
+		ebitenutil.DebugPrintAt(screen, line, int(sw)/2-len(line)*3, titleY+i*16)
 	}
 
 	if g.menuGoat != nil {
 		op := &ebiten.DrawImageOptions{}
-		iw := float64(g.menuGoat.Bounds().Dx())
-		ih := float64(g.menuGoat.Bounds().Dy())
+		iw, ih := float64(g.menuGoat.Bounds().Dx()), float64(g.menuGoat.Bounds().Dy())
 		scale := 3.0
 		bob := math.Sin(g.menuPulse*2) * 6
 		op.GeoM.Scale(scale, scale)
@@ -243,49 +240,40 @@ func (g *Game) drawMenu(screen *ebiten.Image) {
 	}
 
 	centerText := func(s string, y int) {
-		x := int(sw)/2 - len(s)*6/2
-		ebitenutil.DebugPrintAt(screen, s, x, y)
+		ebitenutil.DebugPrintAt(screen, s, int(sw)/2-len(s)*3, y)
 	}
 
 	cy := int(sh * 0.6)
 	centerText("CONTROLS:", cy)
 
-	type ctrl struct{ key, desc string }
-	controls := []ctrl{
+	controls := [][2]string{
 		{"CLICK + AIM", "Charge & aim your horn dash"},
 		{"RELEASE", "Launch!"},
 		{"A/D", "Air control while flying"},
+		{"SPACE", "Double jump (if you have the item)"},
 	}
 
-	maxKeyW := 0
+	maxKeyW, maxDescW := 0, 0
 	for _, c := range controls {
-		if w := len(c.key) * 6; w > maxKeyW {
+		if w := len(c[0]) * 6; w > maxKeyW {
 			maxKeyW = w
 		}
-	}
-
-	maxDescW := 0
-	for _, c := range controls {
-		if w := len(c.desc) * 6; w > maxDescW {
+		if w := len(c[1]) * 6; w > maxDescW {
 			maxDescW = w
 		}
 	}
-	arrowW := 18
-	gap := 6
-	totalW := maxKeyW + gap + arrowW + maxDescW
-	blockX := int(sw)/2 - totalW/2
+
+	arrowW, gap := 18, 6
+	blockX := int(sw)/2 - (maxKeyW+gap+arrowW+maxDescW)/2
 
 	for i, c := range controls {
 		y := cy + 20 + i*16
-		keyW := len(c.key) * 6
-		ebitenutil.DebugPrintAt(screen, c.key, blockX+maxKeyW-keyW, y)
+		ebitenutil.DebugPrintAt(screen, c[0], blockX+maxKeyW-len(c[0])*6, y)
 		ebitenutil.DebugPrintAt(screen, "->", blockX+maxKeyW+gap, y)
-		ebitenutil.DebugPrintAt(screen, c.desc, blockX+maxKeyW+gap+arrowW, y)
+		ebitenutil.DebugPrintAt(screen, c[1], blockX+maxKeyW+gap+arrowW, y)
 	}
 
-	credit := "Jakob Schwendinger & Jakob Wassertheurer"
-	creditX := int(sw)/2 - len(credit)*6/2
-	ebitenutil.DebugPrintAt(screen, credit, creditX, int(sh)-24)
+	centerText("Jakob Schwendinger & Jakob Wassertheurer", int(sh)-24)
 
 	if g.bestScore > 0 {
 		bestStr := fmt.Sprintf("Best Score: %d  |  %dm  |  %d bells", g.bestScore, g.bestMeters, g.bestBells)
