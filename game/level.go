@@ -3,11 +3,9 @@ package game
 import (
 	"fmt"
 	"image"
-	"log"
 	"math/rand/v2"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 var (
@@ -18,7 +16,7 @@ var (
 	stickyTiles  [10]*ebiten.Image
 )
 
-func init() {
+func loadTileAssets() {
 	loadTileSet(rockTiles[:], "assets/rock_tile_%d.png")
 	loadTileSet(bouncyTiles[:], "assets/bouncy_tile_%d.png")
 	loadTileSet(iceTiles[:], "assets/ice_tile_%d.png")
@@ -29,16 +27,7 @@ func init() {
 func loadTileSet(tiles []*ebiten.Image, pattern string) {
 	for i := range tiles {
 		path := fmt.Sprintf(pattern, i+1)
-		img, _, err := ebitenutil.NewImageFromFile(path)
-		if err != nil {
-			if rockTiles[i] != nil {
-				tiles[i] = rockTiles[i]
-			} else {
-				log.Fatalf("failed to load %s: %v", path, err)
-			}
-			continue
-		}
-		tiles[i] = img
+		tiles[i] = loadImageFromFS(path)
 	}
 }
 

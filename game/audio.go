@@ -1,9 +1,10 @@
 package game
 
 import (
+	"bytes"
 	"io"
+	"io/fs"
 	"log"
-	"os"
 
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/audio/wav"
@@ -32,7 +33,7 @@ var (
 	sfxWallHit       *SoundPlayer
 )
 
-func init() {
+func loadAudioAssets() {
 	audioCtx = audio.NewContext(sampleRate)
 
 	sfxBounce = loadWav("assets/bounce.wav")
@@ -50,23 +51,22 @@ func init() {
 }
 
 func loadWav(path string) *SoundPlayer {
-	f, err := os.Open(path)
+	data, err := fs.ReadFile(assetsFS, path)
 	if err != nil {
 		log.Fatalf("audio: open %s: %v", path, err)
 	}
-	defer f.Close()
 
-	decoded, err := wav.DecodeF32(f)
+	decoded, err := wav.DecodeF32(bytes.NewReader(data))
 	if err != nil {
 		log.Fatalf("audio: decode %s: %v", path, err)
 	}
 
-	data, err := io.ReadAll(decoded)
+	pcm, err := io.ReadAll(decoded)
 	if err != nil {
 		log.Fatalf("audio: read %s: %v", path, err)
 	}
 
-	return &SoundPlayer{data: data}
+	return &SoundPlayer{data: pcm}
 }
 
 func (s *SoundPlayer) Play() {
