@@ -15,6 +15,7 @@ const (
 	PowerUpShield PowerUpType = iota
 	PowerUpSuperDash
 	PowerUpSlowFall
+	PowerUpDoubleJump
 )
 
 const (
@@ -58,6 +59,9 @@ func (pu *PowerUp) Draw(screen *ebiten.Image, cameraY, shakeX, shakeY float64) {
 	case PowerUpSlowFall:
 		fill = color.NRGBA{100, 230, 120, 200}
 		symbol = "F"
+	case PowerUpDoubleJump:
+		fill = color.NRGBA{200, 100, 255, 200}
+		symbol = "J"
 	}
 
 	glow := fill
