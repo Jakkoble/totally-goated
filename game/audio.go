@@ -19,6 +19,7 @@ type SoundPlayer struct {
 }
 
 var (
+	sfxBellPickup    *SoundPlayer
 	sfxBounce        *SoundPlayer
 	sfxChargeRelease *SoundPlayer
 	sfxCrumble       *SoundPlayer
@@ -36,6 +37,7 @@ var (
 func loadAudioAssets() {
 	audioCtx = audio.NewContext(sampleRate)
 
+	sfxBellPickup = loadWav("assets/bell_pickup.wav")
 	sfxBounce = loadWav("assets/bounce.wav")
 	sfxChargeRelease = loadWav("assets/charge_release.wav")
 	sfxCrumble = loadWav("assets/crumble.wav")

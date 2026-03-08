@@ -16,6 +16,7 @@ func InitAssets(fsys fs.FS) {
 	assetsFS = fsys
 	loadTileAssets()
 	loadAudioAssets()
+	loadBellAsset()
 }
 
 func loadImageFromFS(path string) *ebiten.Image {

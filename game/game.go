@@ -22,7 +22,10 @@ type Game struct {
 	tick       int
 	menuGoat   *ebiten.Image
 	score      float64
-	bestScore  float64
+	bestScore  int
+	bestMeters int
+	bellCount  int
+	bestBells  int
 	background *ebiten.Image
 	stars      *Starfield
 	speedLines *SpeedLines
@@ -48,6 +51,8 @@ func NewGame() *Game {
 		state:      GameMenu,
 		menuGoat:   img,
 		bestScore:  s.BestScore,
+		bestMeters: s.BestMeters,
+		bestBells:  s.BestBells,
 		background: background,
 		stars:      NewStarfield(),
 		speedLines: &SpeedLines{},
@@ -59,6 +64,7 @@ func (g *Game) startGame() {
 	g.Goat = *NewGoat(0, 0)
 	g.cameraY = 0
 	g.score = 0
+	g.bellCount = 0
 	g.state = GamePlaying
 }
 
@@ -109,9 +115,17 @@ func (g *Game) Update() error {
 				g.Goat.SlowFallTimer = 5.0
 			} else {
 				sfxDeath.Play()
-				if g.score > g.bestScore {
-					g.bestScore = g.score
-					saveBest(g.bestScore)
+				total := g.totalScore()
+				meters := g.currentMeters()
+				saveBest(total, meters, g.bellCount)
+				if total > g.bestScore {
+					g.bestScore = total
+				}
+				if meters > g.bestMeters {
+					g.bestMeters = meters
+				}
+				if g.bellCount > g.bestBells {
+					g.bestBells = g.bellCount
 				}
 				g.state = GameOver
 			}
@@ -265,23 +279,53 @@ func (g *Game) drawGame(screen *ebiten.Image) {
 
 func (g *Game) drawGameOver(screen *ebiten.Image) {
 	vector.FillRect(screen, 0, 0, float32(ScreenWidth), float32(ScreenHeight),
-		color.RGBA{0, 0, 0, 160}, false)
+		color.RGBA{0, 0, 0, 180}, false)
 
-	cx := ScreenWidth / 2
-	cy := ScreenHeight / 2
+	white := color.NRGBA{255, 255, 255, 220}
+	gold := color.NRGBA{255, 210, 50, 220}
+	dim := color.NRGBA{180, 180, 180, 180}
+
+	cx := float64(ScreenWidth) / 2
+	cy := float64(ScreenHeight)/2 - 20
 
 	title := "GAME OVER"
-	ebitenutil.DebugPrintAt(screen, title, cx-len(title)*3, cy-40)
+	drawScaledText(screen, title, cx-float64(len(title))*6*1.5/2, cy-90, 1.5, color.NRGBA{255, 80, 80, 240})
 
-	height := fmt.Sprintf("Height: %d m", g.currentMeters())
-	ebitenutil.DebugPrintAt(screen, height, cx-len(height)*3, cy-10)
+	vector.FillRect(screen, float32(cx-100), float32(cy-55), 200, 1, color.NRGBA{255, 255, 255, 60}, true)
 
-	best := fmt.Sprintf("Best: %d m", g.bestMeters())
-	ebitenutil.DebugPrintAt(screen, best, cx-len(best)*3, cy+10)
+	heightStr := fmt.Sprintf("%d m", g.currentMeters())
+	bellsStr := fmt.Sprintf("%d bells", g.bellCount)
+
+	drawScaledText(screen, "Height:", cx-120, cy-40, 1.0, dim)
+	drawScaledText(screen, heightStr, cx+20, cy-40, 1.0, white)
+
+	drawScaledText(screen, "Bells:", cx-120, cy-20, 1.0, dim)
+	drawScaledText(screen, bellsStr, cx+20, cy-20, 1.0, gold)
+
+	vector.FillRect(screen, float32(cx-100), float32(cy+1), 200, 1, color.NRGBA{255, 255, 255, 60}, true)
+
+	totalStr := fmt.Sprintf("%d", g.totalScore())
+	drawScaledText(screen, "SCORE:", cx-120, cy+14, 1.3, white)
+	drawScaledText(screen, totalStr, cx+20, cy+14, 1.3, white)
+
+	vector.FillRect(screen, float32(cx-100), float32(cy+42), 200, 1, color.NRGBA{255, 255, 255, 40}, true)
+
+	bestScoreStr := fmt.Sprintf("%d", g.bestScore)
+	bestMetersStr := fmt.Sprintf("%d m", g.bestMeters)
+	bestBellsStr := fmt.Sprintf("%d", g.bestBells)
+
+	drawScaledText(screen, "BEST", cx-120, cy+52, 1.0, dim)
+	drawScaledText(screen, "Score:", cx-120, cy+70, 1.0, dim)
+	drawScaledText(screen, bestScoreStr, cx+20, cy+70, 1.0, dim)
+	drawScaledText(screen, "Height:", cx-120, cy+86, 1.0, dim)
+	drawScaledText(screen, bestMetersStr, cx+20, cy+86, 1.0, dim)
+	drawScaledText(screen, "Bells:", cx-120, cy+102, 1.0, dim)
+	drawScaledText(screen, bestBellsStr, cx+20, cy+102, 1.0, gold)
 
 	if g.tick%60 < 40 {
 		prompt := "Click or Space to continue"
-		ebitenutil.DebugPrintAt(screen, prompt, cx-len(prompt)*3, cy+40)
+		pw := float64(len(prompt)) * 6
+		drawScaledText(screen, prompt, cx-pw/2, cy+130, 1.0, dim)
 	}
 }
 
@@ -297,6 +341,6 @@ func (g *Game) currentMeters() int {
 	return toMeters(g.score)
 }
 
-func (g *Game) bestMeters() int {
-	return toMeters(g.bestScore)
+func (g *Game) totalScore() int {
+	return g.currentMeters() + g.bellCount*BellScoreValue
 }

@@ -28,6 +28,11 @@ func drawHUD(screen *ebiten.Image, g *Game) {
 	meterStr := fmt.Sprintf("%d m", meters)
 	drawScaledText(screen, meterStr, 16, 12, 1.8, color.NRGBA{255, 255, 255, 220})
 
+	if g.bellCount > 0 {
+		bellStr := fmt.Sprintf("Bells: %d", g.bellCount)
+		drawScaledText(screen, bellStr, 16, 38, 1.2, color.NRGBA{255, 210, 50, 220})
+	}
+
 	badgeX := float32(12)
 	badgeY := float32(46)
 	gap := float32(6)

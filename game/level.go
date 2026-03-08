@@ -54,6 +54,7 @@ type Platform struct {
 type Level struct {
 	Platforms []Platform
 	PowerUps  []PowerUp
+	Bells     []Bell
 	curY      float64
 	goRight   bool
 	index     int
@@ -63,6 +64,7 @@ func NewLevel() *Level {
 	l := &Level{
 		Platforms: make([]Platform, 0, 300),
 		PowerUps:  make([]PowerUp, 0, 50),
+		Bells:     make([]Bell, 0, 100),
 	}
 	l.Platforms = append(l.Platforms, Platform{
 		X: -35, Y: 0, W: 70, H: 120,
@@ -157,6 +159,16 @@ func (l *Level) GenerateUntil(targetY float64) {
 					})
 				}
 			}
+
+			if l.index > 5 && rand.Float64() < BellSpawnChance {
+				bx := (rand.Float64() - 0.5) * 160
+				by := p.Y - 40 - rand.Float64()*80
+				if !l.bellOverlaps(bx, by) {
+					l.Bells = append(l.Bells, Bell{
+						Pos: Vec2{bx, by},
+					})
+				}
+			}
 		}
 
 		l.goRight = !l.goRight
@@ -210,6 +222,10 @@ func (l *Level) Draw(screen *ebiten.Image, cameraY, shakeX, shakeY float64) {
 	for i := range l.PowerUps {
 		l.PowerUps[i].Draw(screen, cameraY, shakeX, shakeY)
 	}
+
+	for i := range l.Bells {
+		l.Bells[i].Draw(screen, cameraY, shakeX, shakeY)
+	}
 }
 
 func (l *Level) Update() {
@@ -226,6 +242,9 @@ func (l *Level) Update() {
 	for i := range l.PowerUps {
 		l.PowerUps[i].Update()
 	}
+	for i := range l.Bells {
+		l.Bells[i].Update()
+	}
 }
 
 /*
@@ -239,6 +258,23 @@ func (l *Level) powerUpOverlapsPlatform(x, y float64) bool {
 	for _, p := range l.Platforms {
 		if x+PowerUpRadius > p.X && x-PowerUpRadius < p.X+p.W &&
 			y+PowerUpRadius > p.Y && y-PowerUpRadius < p.Y+p.H {
+			return true
+		}
+	}
+	return false
+}
+
+func (l *Level) bellOverlaps(x, y float64) bool {
+	for _, p := range l.Platforms {
+		if x+BellRadius > p.X && x-BellRadius < p.X+p.W &&
+			y+BellRadius > p.Y && y-BellRadius < p.Y+p.H {
+			return true
+		}
+	}
+	for _, b := range l.Bells {
+		dx := x - b.Pos.X
+		dy := y - b.Pos.Y
+		if dx*dx+dy*dy < (BellRadius*4)*(BellRadius*4) {
 			return true
 		}
 	}
