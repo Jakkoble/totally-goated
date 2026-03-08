@@ -339,24 +339,32 @@ func (g *Game) drawGameOver(screen *ebiten.Image) {
 	title := "GAME OVER"
 	drawScaledText(screen, title, cx-float64(len(title))*6*1.5/2, cy-90, 1.5, color.NRGBA{255, 80, 80, 240})
 
-	vector.FillRect(screen, float32(cx-100), float32(cy-55), 200, 1, color.NRGBA{255, 255, 255, 60}, true)
+	yOff := 0.0
+	if g.newBestScore || g.newBestMeters || g.newBestBells {
+		hsText := "NEW HIGHSCORE!"
+		hsW := float64(len(hsText)*8 + 2)
+		drawScaledText(screen, hsText, cx-hsW/2, cy-62, 1.5, color.NRGBA{255, 210, 50, 255})
+		yOff = 20
+	}
+
+	vector.FillRect(screen, float32(cx-100), float32(cy-55+yOff), 200, 1, color.NRGBA{255, 255, 255, 60}, true)
 
 	heightStr := fmt.Sprintf("%d m", g.currentMeters())
 	bellsStr := fmt.Sprintf("%d bells", g.bellCount)
 
-	drawScaledText(screen, "Height:", cx-120, cy-40, 1.0, dim)
-	drawScaledText(screen, heightStr, cx+20, cy-40, 1.0, white)
+	drawScaledText(screen, "Height:", cx-100, cy-40+yOff, 1.0, dim)
+	drawScaledText(screen, heightStr, cx+40, cy-40+yOff, 1.0, white)
 
-	drawScaledText(screen, "Bells:", cx-120, cy-20, 1.0, dim)
-	drawScaledText(screen, bellsStr, cx+20, cy-20, 1.0, gold)
+	drawScaledText(screen, "Bells:", cx-100, cy-20+yOff, 1.0, dim)
+	drawScaledText(screen, bellsStr, cx+40, cy-20+yOff, 1.0, gold)
 
-	vector.FillRect(screen, float32(cx-100), float32(cy+1), 200, 1, color.NRGBA{255, 255, 255, 60}, true)
+	vector.FillRect(screen, float32(cx-100), float32(cy+1+yOff), 200, 1, color.NRGBA{255, 255, 255, 60}, true)
 
 	totalStr := fmt.Sprintf("%d", g.totalScore())
-	drawScaledText(screen, "SCORE:", cx-120, cy+14, 1.3, white)
-	drawScaledText(screen, totalStr, cx+20, cy+14, 1.3, white)
+	drawScaledText(screen, "SCORE:", cx-100, cy+14+yOff, 1.3, white)
+	drawScaledText(screen, totalStr, cx+40, cy+14+yOff, 1.3, white)
 
-	vector.FillRect(screen, float32(cx-100), float32(cy+42), 200, 1, color.NRGBA{255, 255, 255, 40}, true)
+	vector.FillRect(screen, float32(cx-100), float32(cy+42+yOff), 200, 1, color.NRGBA{255, 255, 255, 40}, true)
 
 	bestScoreStr := fmt.Sprintf("%d", g.bestScore)
 	bestMetersStr := fmt.Sprintf("%d m", g.bestMeters)
@@ -364,41 +372,32 @@ func (g *Game) drawGameOver(screen *ebiten.Image) {
 
 	newBestClr := color.NRGBA{255, 210, 50, 255}
 
-	drawScaledText(screen, "BEST", cx-120, cy+52, 1.0, dim)
+	drawScaledText(screen, "BEST", cx-100, cy+52+yOff, 1.0, dim)
 	scoreClr := dim
 	if g.newBestScore {
 		scoreClr = newBestClr
 	}
-	drawScaledText(screen, "Score:", cx-120, cy+70, 1.0, dim)
-	drawScaledText(screen, bestScoreStr, cx+20, cy+70, 1.0, scoreClr)
-	if g.newBestScore {
-		drawScaledText(screen, "NEW!", cx+80, cy+70, 1.0, newBestClr)
-	}
+	drawScaledText(screen, "Score:", cx-100, cy+70+yOff, 1.0, dim)
+	drawScaledText(screen, bestScoreStr, cx+40, cy+70+yOff, 1.0, scoreClr)
 
 	metersClr := dim
 	if g.newBestMeters {
 		metersClr = newBestClr
 	}
-	drawScaledText(screen, "Height:", cx-120, cy+86, 1.0, dim)
-	drawScaledText(screen, bestMetersStr, cx+20, cy+86, 1.0, metersClr)
-	if g.newBestMeters {
-		drawScaledText(screen, "NEW!", cx+80, cy+86, 1.0, newBestClr)
-	}
+	drawScaledText(screen, "Height:", cx-100, cy+86+yOff, 1.0, dim)
+	drawScaledText(screen, bestMetersStr, cx+40, cy+86+yOff, 1.0, metersClr)
 
 	bellsClr := gold
 	if g.newBestBells {
 		bellsClr = newBestClr
 	}
-	drawScaledText(screen, "Bells:", cx-120, cy+102, 1.0, dim)
-	drawScaledText(screen, bestBellsStr, cx+20, cy+102, 1.0, bellsClr)
-	if g.newBestBells {
-		drawScaledText(screen, "NEW!", cx+80, cy+102, 1.0, newBestClr)
-	}
+	drawScaledText(screen, "Bells:", cx-100, cy+102+yOff, 1.0, dim)
+	drawScaledText(screen, bestBellsStr, cx+40, cy+102+yOff, 1.0, bellsClr)
 
 	if g.tick%60 < 40 {
 		prompt := "Click or Space to continue"
 		pw := float64(len(prompt)) * 6
-		drawScaledText(screen, prompt, cx-pw/2, cy+130, 1.0, dim)
+		drawScaledText(screen, prompt, cx-pw/2, cy+130+yOff, 1.0, dim)
 	}
 }
 
