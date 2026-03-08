@@ -23,8 +23,6 @@ func (v Vec2) Lerp(o Vec2, t float64) Vec2 {
 	return Vec2{v.X + (o.X-v.X)*t, v.Y + (o.Y-v.Y)*t}
 }
 
-func (v Vec2) Dot(o Vec2) float64 { return v.X*o.X + v.Y*o.Y }
-
 func Clamp(v, min, max float64) float64 {
 	if v < min {
 		return min
@@ -41,8 +39,4 @@ func Lerp(a, b, t float64) float64 {
 
 func AngleFromDir(dir Vec2) float64 {
 	return math.Atan2(dir.Y, dir.X)
-}
-
-func DirFromAngle(a float64) Vec2 {
-	return Vec2{math.Cos(a), math.Sin(a)}
 }

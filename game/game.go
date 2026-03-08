@@ -24,13 +24,16 @@ type Game struct {
 	background *ebiten.Image
 	stars      *Starfield
 	speedLines *SpeedLines
+	shakeMag   float64
+	shakeX     float64
+	shakeY     float64
 }
 
 type GameState int
 
 const (
-	GameMenu    GameState = iota
-	GamePlaying GameState = iota
+	GameMenu GameState = iota
+	GamePlaying
 	GameOver
 )
 
@@ -69,9 +72,10 @@ func (g *Game) Update() error {
 		}
 
 	case GamePlaying:
-		g.Goat.Update(g.level, g.cameraY)
+		g.Goat.Update(g.level, g.cameraY, g)
 		g.level.Update()
 		g.speedLines.Update(g.Goat.Vel)
+		g.updateShake()
 
 		height := -g.Goat.Pos.Y
 		if height > g.score {
@@ -145,11 +149,10 @@ func (g *Game) drawBackground(screen *ebiten.Image) {
 	}
 	imgW := float64(g.background.Bounds().Dx())
 	imgH := float64(g.background.Bounds().Dy())
-	scaleX := float64(ScreenWidth) / imgW
-	scaleY := scaleX
+	scale := float64(ScreenWidth) / imgW
 	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Scale(scaleX, scaleY)
-	op.GeoM.Translate(0, float64(ScreenHeight)-imgH*scaleY)
+	op.GeoM.Scale(scale, scale)
+	op.GeoM.Translate(0, float64(ScreenHeight)-imgH*scale)
 	screen.DrawImage(g.background, op)
 }
 
@@ -235,11 +238,26 @@ func (g *Game) drawMenu(screen *ebiten.Image) {
 	ebitenutil.DebugPrintAt(screen, credit, creditX, int(sh)-24)
 }
 
-func (g *Game) drawGame(screen *ebiten.Image) {
-	g.level.Draw(screen, g.cameraY)
-	g.Goat.Draw(screen, g.cameraY)
-	g.speedLines.Draw(screen)
+func (g *Game) AddShake(amount float64) {
+	g.shakeMag = math.Min(g.shakeMag+amount, 16.0)
+}
 
+func (g *Game) updateShake() {
+	if g.shakeMag > 0.2 {
+		g.shakeX = math.Sin(float64(g.tick)*1.1)*g.shakeMag + math.Cos(float64(g.tick)*2.3)*g.shakeMag*0.5
+		g.shakeY = math.Cos(float64(g.tick)*1.7)*g.shakeMag + math.Sin(float64(g.tick)*3.1)*g.shakeMag*0.5
+		g.shakeMag *= 0.88
+	} else {
+		g.shakeX = 0
+		g.shakeY = 0
+		g.shakeMag = 0
+	}
+}
+
+func (g *Game) drawGame(screen *ebiten.Image) {
+	g.level.Draw(screen, g.cameraY, g.shakeX, g.shakeY)
+	g.Goat.Draw(screen, g.cameraY, g.shakeX, g.shakeY)
+	g.speedLines.Draw(screen)
 	drawHUD(screen, g)
 }
 

@@ -175,10 +175,9 @@ func (l *Level) GenerateUntil(targetY float64) {
 	}
 }
 
-func (l *Level) Draw(screen *ebiten.Image, cameraY float64) {
-
-	offsetX := float64(ScreenWidth) / 2
-	offsetY := float64(ScreenHeight)/2 - cameraY
+func (l *Level) Draw(screen *ebiten.Image, cameraY, shakeX, shakeY float64) {
+	offsetX := float64(ScreenWidth)/2 + shakeX
+	offsetY := float64(ScreenHeight)/2 - cameraY + shakeY
 
 	for _, p := range l.Platforms {
 		if p.Destroyed {
@@ -220,7 +219,7 @@ func (l *Level) Draw(screen *ebiten.Image, cameraY float64) {
 	}
 
 	for i := range l.PowerUps {
-		l.PowerUps[i].Draw(screen, cameraY)
+		l.PowerUps[i].Draw(screen, cameraY, shakeX, shakeY)
 	}
 }
 
