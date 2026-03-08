@@ -44,6 +44,10 @@ type Goat struct {
 	HasShield     bool
 	HasSuperDash  bool
 	SlowFallTimer float64
+
+	SquashX  float64
+	SquashY  float64
+	Rotation float64
 }
 
 func NewGoat(x, y float64) *Goat {
@@ -57,27 +61,37 @@ func NewGoat(x, y float64) *Goat {
 		WallPlatIdx:  -1,
 		Image:        goatImage,
 		DashSpeedMod: 1.0,
+		SquashX:      1.0,
+		SquashY:      1.0,
 	}
 }
 
-func (g *Goat) Update(level *Level, cameraY float64) {
+func (g *Goat) Update(level *Level, cameraY float64, game *Game) {
+	g.SquashX = Lerp(g.SquashX, 1.0, 0.12)
+	g.SquashY = Lerp(g.SquashY, 1.0, 0.12)
+	g.Rotation = Lerp(g.Rotation, 0.0, 0.08)
+
 	switch g.State {
 	case StateAir:
-		g.updateAir(level)
+		g.updateAir(level, game)
 	case StateWall:
 		g.updateWall(level)
 	case StateCharging:
-		g.updateCharging(level, cameraY)
+		g.updateCharging(level, cameraY, game)
 	}
 
 	g.Particles.Update()
 
 	if g.State == StateAir {
 		g.Particles.Emit(g.Pos, g.Vel)
+		if g.Vel.Len() > 2 {
+			targetRot := math.Atan2(g.Vel.Y, g.Vel.X*g.FacingDir) * 0.15
+			g.Rotation = Lerp(g.Rotation, targetRot, 0.05)
+		}
 	}
 }
 
-func (g *Goat) updateAir(level *Level) {
+func (g *Goat) updateAir(level *Level, game *Game) {
 	grav := Gravity
 	if g.SlowFallTimer > 0 {
 		grav *= SlowFallGravityMul
@@ -100,7 +114,7 @@ func (g *Goat) updateAir(level *Level) {
 
 	g.Pos = g.Pos.Add(g.Vel)
 	g.collectPowerUps(level)
-	g.resolveCollisions(level)
+	g.resolveCollisions(level, game)
 }
 
 func (g *Goat) collectPowerUps(level *Level) {
@@ -159,7 +173,7 @@ func (g *Goat) updateWall(level *Level) {
 	g.checkStillOnWall(level)
 }
 
-func (g *Goat) updateCharging(level *Level, cameraY float64) {
+func (g *Goat) updateCharging(level *Level, cameraY float64, game *Game) {
 	if g.WallPlatIdx >= 0 && g.WallPlatIdx < len(level.Platforms) {
 		if level.Platforms[g.WallPlatIdx].Destroyed {
 			g.detachFromWall()
@@ -182,10 +196,7 @@ func (g *Goat) updateCharging(level *Level, cameraY float64) {
 	g.ClingTimer++
 
 	if !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		mx, my := ebiten.CursorPosition()
-		worldX := float64(mx) - float64(ScreenWidth)/2
-		worldY := float64(my) - float64(ScreenHeight)/2 + cameraY
-		dir := (Vec2{worldX, worldY}).Sub(g.Pos).Normalize()
+		dir := g.aimDir(cameraY)
 
 		speed := Lerp(DashMinSpeed, DashMaxSpeed, g.ChargingPercentage())
 		speed *= g.DashSpeedMod
@@ -208,6 +219,14 @@ func (g *Goat) updateCharging(level *Level, cameraY float64) {
 		g.State = StateAir
 		g.Wall = WallNone
 		g.WallPlatIdx = -1
+
+		g.SquashX = 0.75
+		g.SquashY = 1.2
+		g.Rotation = AngleFromDir(dir) * 0.5
+		g.Particles.SpawnDashSparks(g.Pos, dir, 12)
+		if game != nil {
+			game.AddShake(speed * 0.2)
+		}
 		return
 	}
 
@@ -227,7 +246,7 @@ func (g *Goat) checkStillOnWall(level *Level) {
 	}
 }
 
-func (g *Goat) resolveCollisions(level *Level) {
+func (g *Goat) resolveCollisions(level *Level, game *Game) {
 	gw := float64(g.Image.Bounds().Dx())
 	gh := float64(g.Image.Bounds().Dy())
 
@@ -258,27 +277,34 @@ func (g *Goat) resolveCollisions(level *Level) {
 		case minPen == penT && g.Vel.Y >= 0:
 			g.Pos.Y = p.Y - gh/2
 
+			impact := g.Vel.Len()
+			if impact > 3 {
+				g.Particles.SpawnLandImpact(Vec2{g.Pos.X, p.Y}, impact)
+				g.SquashX = 1.3
+				g.SquashY = 0.7
+			}
+
 			distL := g.Pos.X - p.X
 			distR := (p.X + p.W) - g.Pos.X
 			if distL < distR {
 				g.Pos.X = p.X - gw/2
 				g.Pos.Y = p.Y + gh/2
-				g.attachToWall(WallRight, idx, level)
+				g.attachToWall(WallRight, idx, level, game)
 			} else {
 				g.Pos.X = p.X + p.W + gw/2
 				g.Pos.Y = p.Y + gh/2
-				g.attachToWall(WallLeft, idx, level)
+				g.attachToWall(WallLeft, idx, level, game)
 			}
 			return
 
 		case minPen == penL:
 			g.Pos.X = p.X - gw/2
-			g.attachToWall(WallRight, idx, level)
+			g.attachToWall(WallRight, idx, level, game)
 			return
 
 		case minPen == penR:
 			g.Pos.X = p.X + p.W + gw/2
-			g.attachToWall(WallLeft, idx, level)
+			g.attachToWall(WallLeft, idx, level, game)
 			return
 
 		case minPen == penB:
@@ -288,8 +314,11 @@ func (g *Goat) resolveCollisions(level *Level) {
 	}
 }
 
-func (g *Goat) attachToWall(side WallSide, platIdx int, level *Level) {
+func (g *Goat) attachToWall(side WallSide, platIdx int, level *Level, game *Game) {
 	p := &level.Platforms[platIdx]
+
+	wasMoving := g.Vel.Len() > 2
+	impactSpeed := g.Vel.Len()
 
 	if p.Type == PlatBouncy {
 		sfxBounce.Play()
@@ -352,6 +381,16 @@ func (g *Goat) attachToWall(side WallSide, platIdx int, level *Level) {
 	} else {
 		g.FacingDir = 1
 	}
+
+	if wasMoving {
+		g.SquashX = 1.4
+		g.SquashY = 0.7
+		g.Particles.SpawnDust(g.Pos, 6)
+		g.Particles.SpawnImpactRing(g.Pos)
+		if game != nil && impactSpeed > 4 {
+			game.AddShake(impactSpeed * 0.3)
+		}
+	}
 }
 
 func (g *Goat) detachFromWall() {
@@ -360,11 +399,26 @@ func (g *Goat) detachFromWall() {
 	g.WallPlatIdx = -1
 }
 
-func (g *Goat) Draw(screen *ebiten.Image, cameraY float64) {
-	g.Particles.Draw(screen, cameraY)
+func (g *Goat) aimDir(cameraY float64) Vec2 {
+	mx, my := ebiten.CursorPosition()
+	worldX := float64(mx) - float64(ScreenWidth)/2
+	worldY := float64(my) - float64(ScreenHeight)/2 + cameraY
+	dir := (Vec2{worldX, worldY}).Sub(g.Pos).Normalize()
+	if dir.Len() < 0.0001 {
+		if g.Wall == WallLeft {
+			dir = Vec2{1, -0.35}.Normalize()
+		} else {
+			dir = Vec2{-1, -0.35}.Normalize()
+		}
+	}
+	return dir
+}
 
-	offsetX := float64(ScreenWidth) / 2
-	offsetY := float64(ScreenHeight)/2 - cameraY
+func (g *Goat) Draw(screen *ebiten.Image, cameraY, shakeX, shakeY float64) {
+	g.Particles.Draw(screen, cameraY, shakeX, shakeY)
+
+	offsetX := float64(ScreenWidth)/2 + shakeX
+	offsetY := float64(ScreenHeight)/2 - cameraY + shakeY
 
 	if g.HasShield {
 		cx := float32(g.Pos.X + offsetX)
@@ -388,11 +442,14 @@ func (g *Goat) Draw(screen *ebiten.Image, cameraY float64) {
 	op := &ebiten.DrawImageOptions{}
 	iw := float64(g.Image.Bounds().Dx())
 	ih := float64(g.Image.Bounds().Dy())
+
+	op.GeoM.Translate(-iw/2, -ih/2)
 	if g.FacingDir < 0 {
 		op.GeoM.Scale(-1, 1)
-		op.GeoM.Translate(iw, 0)
 	}
-	op.GeoM.Translate(g.Pos.X-iw/2+offsetX, g.Pos.Y-ih/2+offsetY)
+	op.GeoM.Scale(g.SquashX, g.SquashY)
+	op.GeoM.Rotate(g.Rotation)
+	op.GeoM.Translate(g.Pos.X+offsetX, g.Pos.Y+offsetY)
 	screen.DrawImage(g.Image, op)
 }
 
@@ -438,18 +495,7 @@ func chargingColor(pct float64) color.NRGBA {
 }
 
 func (g *Goat) drawDashAimLine(screen *ebiten.Image, offsetX, offsetY, cameraY float64) {
-	mx, my := ebiten.CursorPosition()
-	worldX := float64(mx) - float64(ScreenWidth)/2
-	worldY := float64(my) - float64(ScreenHeight)/2 + cameraY
-
-	dir := (Vec2{worldX, worldY}).Sub(g.Pos).Normalize()
-	if dir.Len() < 0.0001 {
-		if g.Wall == WallLeft {
-			dir = Vec2{1, -0.35}.Normalize()
-		} else {
-			dir = Vec2{-1, -0.35}.Normalize()
-		}
-	}
+	dir := g.aimDir(cameraY)
 
 	power := g.ChargingPercentage()
 	lineLen := 40.0 + power*70.0
@@ -495,18 +541,7 @@ func (g *Goat) drawDashAimLine(screen *ebiten.Image, offsetX, offsetY, cameraY f
 }
 
 func (g *Goat) drawDashTrajectory(screen *ebiten.Image, offsetX, offsetY, cameraY float64) {
-	mx, my := ebiten.CursorPosition()
-	worldX := float64(mx) - float64(ScreenWidth)/2
-	worldY := float64(my) - float64(ScreenHeight)/2 + cameraY
-
-	dir := (Vec2{worldX, worldY}).Sub(g.Pos).Normalize()
-	if dir.Len() < 0.0001 {
-		if g.Wall == WallLeft {
-			dir = Vec2{1, -0.35}.Normalize()
-		} else {
-			dir = Vec2{-1, -0.35}.Normalize()
-		}
-	}
+	dir := g.aimDir(cameraY)
 
 	speed := Lerp(DashMinSpeed, DashMaxSpeed, g.ChargingPercentage())
 	speed *= g.DashSpeedMod
