@@ -52,19 +52,21 @@ type Platform struct {
 }
 
 type Level struct {
-	Platforms []Platform
-	PowerUps  []PowerUp
-	Bells     []Bell
-	curY      float64
-	goRight   bool
-	index     int
+	Platforms        []Platform
+	PowerUps         []PowerUp
+	Bells            []Bell
+	curY             float64
+	goRight          bool
+	index            int
+	sinceLastPowerUp int
 }
 
 func NewLevel() *Level {
 	l := &Level{
-		Platforms: make([]Platform, 0, 300),
-		PowerUps:  make([]PowerUp, 0, 50),
-		Bells:     make([]Bell, 0, 100),
+		Platforms:        make([]Platform, 0, 300),
+		PowerUps:         make([]PowerUp, 0, 50),
+		Bells:            make([]Bell, 0, 100),
+		sinceLastPowerUp: PowerUpMinGap,
 	}
 	l.Platforms = append(l.Platforms, Platform{
 		X: -35, Y: 0, W: 70, H: 120,
@@ -148,21 +150,23 @@ func (l *Level) GenerateUntil(targetY float64) {
 		if !l.overlaps(p) {
 			l.Platforms = append(l.Platforms, p)
 
-			if l.index > 20 && rand.Float64() < PowerUpSpawnChance {
+			l.sinceLastPowerUp++
+			if l.index > 3 && l.sinceLastPowerUp >= PowerUpMinGap && rand.Float64() < PowerUpSpawnChance {
 				puType := PowerUpType(rand.IntN(4))
-				puX := (rand.Float64() - 0.5) * 80
-				puY := p.Y - 20 - rand.Float64()*40
+				puX := (rand.Float64() - 0.5) * 100
+				puY := p.Y - 30 - rand.Float64()*50
 				if !l.powerUpOverlapsPlatform(puX, puY) {
 					l.PowerUps = append(l.PowerUps, PowerUp{
 						Pos:  Vec2{puX, puY},
 						Type: puType,
 					})
+					l.sinceLastPowerUp = 0
 				}
 			}
 
-			if l.index > 5 && rand.Float64() < BellSpawnChance {
-				bx := (rand.Float64() - 0.5) * 160
-				by := p.Y - 40 - rand.Float64()*80
+			if l.index > 3 && rand.Float64() < BellSpawnChance {
+				bx := (rand.Float64() - 0.5) * 120
+				by := p.Y - 30 - rand.Float64()*60
 				if !l.bellOverlaps(bx, by) {
 					l.Bells = append(l.Bells, Bell{
 						Pos: Vec2{bx, by},
