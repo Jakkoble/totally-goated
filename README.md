@@ -3,7 +3,12 @@
 A vertical climbing platformer built with [Go](https://go.dev/) and [Ebitengine](https://ebitengine.org/). Dash upward as a goat, bounce off platforms, collect bells, grab power-ups, and climb as high as you can.
 
 <p align="center">
-  <img src="screenshots/main-screen.png" alt="Main Menu" width="45%">
+  <img src="screenshots/main-screen.png" alt="Main Menu" width="80%">
+</p>
+
+<p align="center">
+  <img src="screenshots/preview.gif" alt="Gameplay Preview" width="45%">
+  <img src="screenshots/game.png" alt="Gameplay" width="45%">
 </p>
 
 ## Gameplay
@@ -177,18 +182,26 @@ GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o totally-goated-linux .
 
 ### WebAssembly (Browser)
 
+#### Local dev
 ```bash
-# 1. Build the WASM binary
 GOOS=js GOARCH=wasm go build -o wasm/game.wasm .
-
-# 2. Ensure wasm_exec.js matches your Go version
-cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" wasm/
-
-# 3. Serve the wasm/ directory
+cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" wasm/
 cd wasm && python3 -m http.server 8080
 ```
+Then open `http://localhost:8080`.
 
-Then open `http://localhost:8080` in a browser.
+#### Docker deployment
+```bash
+docker buildx build --platform linux/amd64 -t totally-goated --load .
+docker save totally-goated | gzip > totally-goated.tar.gz
+# Upload to server, then:
+docker load < totally-goated.tar.gz
+docker run -d --name totally-goated --network web --restart unless-stopped totally-goated
+```
+
+### Play Online
+
+**[totally-goated.jakobaio.dev](https://totally-goated.jakobaio.dev)**
 
 
 ## Authors
