@@ -17,11 +17,11 @@ var (
 )
 
 func loadTileAssets() {
-	loadTileSet(rockTiles[:], "assets/rock_tile_%d.png")
-	loadTileSet(bouncyTiles[:], "assets/bouncy_tile_%d.png")
-	loadTileSet(iceTiles[:], "assets/ice_tile_%d.png")
-	loadTileSet(crumblyTiles[:], "assets/crumbly_tile_%d.png")
-	loadTileSet(stickyTiles[:], "assets/sticky_tile_%d.png")
+	loadTileSet(rockTiles[:], "assets/textures/rock_tile_%d.png")
+	loadTileSet(bouncyTiles[:], "assets/textures/bouncy_tile_%d.png")
+	loadTileSet(iceTiles[:], "assets/textures/ice_tile_%d.png")
+	loadTileSet(crumblyTiles[:], "assets/textures/crumbly_tile_%d.png")
+	loadTileSet(stickyTiles[:], "assets/textures/sticky_tile_%d.png")
 }
 
 func loadTileSet(tiles []*ebiten.Image, pattern string) {

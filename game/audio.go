@@ -37,19 +37,19 @@ var (
 func loadAudioAssets() {
 	audioCtx = audio.NewContext(sampleRate)
 
-	sfxBellPickup = loadWav("assets/bell_pickup.wav")
-	sfxBounce = loadWav("assets/bounce.wav")
-	sfxChargeRelease = loadWav("assets/charge_release.wav")
-	sfxCrumble = loadWav("assets/crumble.wav")
-	sfxDashPower5 = loadWav("assets/dash_power5.wav")
-	sfxDashPower10 = loadWav("assets/dash_power10.wav")
-	sfxDashPower15 = loadWav("assets/dash_power15.wav")
-	sfxDeath = loadWav("assets/death.wav")
-	sfxIce = loadWav("assets/ice.wav")
-	sfxMilestone = loadWav("assets/milestone.wav")
-	sfxPowerup = loadWav("assets/powerup.wav")
-	sfxShieldBreak = loadWav("assets/shield_break.wav")
-	sfxWallHit = loadWav("assets/wall_hit.wav")
+	sfxBellPickup = loadWav("assets/sound/bell_pickup.wav")
+	sfxBounce = loadWav("assets/sound/bounce.wav")
+	sfxChargeRelease = loadWav("assets/sound/charge_release.wav")
+	sfxCrumble = loadWav("assets/sound/crumble.wav")
+	sfxDashPower5 = loadWav("assets/sound/dash_power5.wav")
+	sfxDashPower10 = loadWav("assets/sound/dash_power10.wav")
+	sfxDashPower15 = loadWav("assets/sound/dash_power15.wav")
+	sfxDeath = loadWav("assets/sound/death.wav")
+	sfxIce = loadWav("assets/sound/ice.wav")
+	sfxMilestone = loadWav("assets/sound/milestone.wav")
+	sfxPowerup = loadWav("assets/sound/powerup.wav")
+	sfxShieldBreak = loadWav("assets/sound/shield_break.wav")
+	sfxWallHit = loadWav("assets/sound/wall_hit.wav")
 }
 
 func loadWav(path string) *SoundPlayer {
