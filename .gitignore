@@ -27,3 +27,6 @@ Thumbs.db
 .env
 
 save.json
+*.tar.gz
+wasm/game.wasm
+wasm/wasm_exec.js
