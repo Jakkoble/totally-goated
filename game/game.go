@@ -229,6 +229,10 @@ func (g *Game) drawMenu(screen *ebiten.Image) {
 		ebitenutil.DebugPrintAt(screen, "->", blockX+maxKeyW+gap, y)
 		ebitenutil.DebugPrintAt(screen, c.desc, blockX+maxKeyW+gap+arrowW, y)
 	}
+
+	credit := "Jakob Schwendinger & Jakob Wassertheurer"
+	creditX := int(sw)/2 - len(credit)*6/2
+	ebitenutil.DebugPrintAt(screen, credit, creditX, int(sh)-24)
 }
 
 func (g *Game) drawGame(screen *ebiten.Image) {
@@ -236,31 +240,28 @@ func (g *Game) drawGame(screen *ebiten.Image) {
 	g.Goat.Draw(screen, g.cameraY)
 	g.speedLines.Draw(screen)
 
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("%d m", g.currentMeters()), 10, 10)
-	hudY := 28
-	if g.Goat.HasShield {
-		ebitenutil.DebugPrintAt(screen, "[SHIELD]", 10, hudY)
-		hudY += 16
-	}
-	if g.Goat.HasSuperDash {
-		ebitenutil.DebugPrintAt(screen, "[SUPER DASH]", 10, hudY)
-		hudY += 16
-	}
-	if g.Goat.SlowFallTimer > 0 {
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("[SLOW FALL %.1fs]", g.Goat.SlowFallTimer), 10, hudY)
-	}
+	drawHUD(screen, g)
 }
 
 func (g *Game) drawGameOver(screen *ebiten.Image) {
 	vector.FillRect(screen, 0, 0, float32(ScreenWidth), float32(ScreenHeight),
-		color.RGBA{0, 0, 0, 150}, false)
-	ebitenutil.DebugPrintAt(screen, "GAME OVER", ScreenWidth/2-36, ScreenHeight/2-30)
+		color.RGBA{0, 0, 0, 160}, false)
 
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Height: %d m", g.currentMeters()), ScreenWidth/2-50, ScreenHeight/2-10)
-	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Best: %d m", g.bestMeters()), ScreenWidth/2-40, ScreenHeight/2+6)
+	cx := ScreenWidth / 2
+	cy := ScreenHeight / 2
+
+	title := "GAME OVER"
+	ebitenutil.DebugPrintAt(screen, title, cx-len(title)*3, cy-40)
+
+	height := fmt.Sprintf("Height: %d m", g.currentMeters())
+	ebitenutil.DebugPrintAt(screen, height, cx-len(height)*3, cy-10)
+
+	best := fmt.Sprintf("Best: %d m", g.bestMeters())
+	ebitenutil.DebugPrintAt(screen, best, cx-len(best)*3, cy+10)
 
 	if g.tick%60 < 40 {
-		ebitenutil.DebugPrintAt(screen, "Click or Space to continue", ScreenWidth/2-100, ScreenHeight/2+30)
+		prompt := "Click or Space to continue"
+		ebitenutil.DebugPrintAt(screen, prompt, cx-len(prompt)*3, cy+40)
 	}
 }
 
