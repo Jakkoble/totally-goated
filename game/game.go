@@ -78,7 +78,7 @@ func (g *Game) Update() error {
 			oldMeters := int(g.score / PixelsPerMeter)
 			g.score = height
 			newMeters := int(g.score / PixelsPerMeter)
-			if newMeters/50 > oldMeters/50 {
+			if newMeters/100 > oldMeters/100 {
 				sfxMilestone.Play()
 			}
 		}
