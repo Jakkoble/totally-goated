@@ -410,7 +410,6 @@ func (g *Goat) attachToWall(side WallSide, platIdx int, level *Level, game *Game
 	case PlatCrumbly:
 		if !p.CrumbleStarted {
 			p.CrumbleStarted = true
-			sfxCrumble.Play()
 		}
 		sfxWallHit.Play()
 	default:
@@ -604,7 +603,7 @@ func (g *Goat) drawDashTrajectory(screen *ebiten.Image, offsetX, offsetY, camera
 	if g.HasSuperDash {
 		speed *= SuperDashMult
 	}
-	
+
 	vel := dir.Scale(speed)
 	pos := g.Pos
 

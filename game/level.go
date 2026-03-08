@@ -251,6 +251,7 @@ func (l *Level) Update() {
 			p.CrumbleTimer += dt
 			if p.CrumbleTimer >= CrumbleTime {
 				p.Destroyed = true
+				sfxCrumble.Play()
 			}
 		}
 	}
