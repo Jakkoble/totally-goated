@@ -39,9 +39,10 @@ type Goat struct {
 	ChargeTime float64
 	Particles  ParticleSystem
 
-	HasShield     bool
-	HasSuperDash  bool
-	SlowFallTimer float64
+	HasShield      bool
+	HasSuperDash   bool
+	SlowFallTimer  float64
+	HasDoubleJump bool
 
 	SquashX  float64
 	SquashY  float64
@@ -109,6 +110,15 @@ func (g *Goat) updateAir(level *Level, game *Game) {
 
 	g.Vel.X *= DashDrag
 
+	if g.HasDoubleJump && inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+		g.Vel.Y = -DoubleJumpSpeed
+		g.HasDoubleJump = false
+		g.SquashX = 0.8
+		g.SquashY = 1.25
+		g.Particles.SpawnDust(g.Pos, 8)
+		sfxPowerup.Play()
+	}
+
 	g.Pos = g.Pos.Add(g.Vel)
 	g.collectPowerUps(level)
 	g.resolveCollisions(level, game)
@@ -137,6 +147,8 @@ func (g *Goat) collectPowerUps(level *Level) {
 				g.HasSuperDash = true
 			case PowerUpSlowFall:
 				g.SlowFallTimer = SlowFallDuration
+			case PowerUpDoubleJump:
+				g.HasDoubleJump = true
 			}
 		}
 	}
