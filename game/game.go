@@ -9,6 +9,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+
+	_ "image/png"
 )
 
 type Game struct {
@@ -38,8 +40,8 @@ const (
 )
 
 func NewGame() *Game {
-	img, _, _ := ebitenutil.NewImageFromFile("assets/goat.png")
-	background, _, _ := ebitenutil.NewImageFromFile("assets/background.png")
+	img := loadImageFromFS("assets/goat.png")
+	background := loadImageFromFS("assets/background.png")
 
 	s := loadSave()
 	return &Game{

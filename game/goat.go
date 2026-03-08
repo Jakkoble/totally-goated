@@ -2,11 +2,9 @@ package game
 
 import (
 	"image/color"
-	"log"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
@@ -51,10 +49,7 @@ type Goat struct {
 }
 
 func NewGoat(x, y float64) *Goat {
-	goatImage, _, err := ebitenutil.NewImageFromFile("assets/goat.png")
-	if err != nil {
-		log.Fatal(err)
-	}
+	goatImage := loadImageFromFS("assets/goat.png")
 	return &Goat{
 		Pos:          Vec2{x, y},
 		FacingDir:    1,
