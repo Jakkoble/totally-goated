@@ -4,12 +4,13 @@ const (
 	ScreenWidth  = 1280
 	ScreenHeight = 720
 
-	IceSlideSpeed  = 1.8
-	BouncyReflect      = 1.2
-	BouncyMinSpeed     = 8.0
-	BouncySideAbsorb   = 0.5
-	StickyDashMult = 0.5
-	CrumbleTime    = 1.0
+	IceSlideSpeed    = 1.8
+	BouncyReflect    = 1.2
+	BouncyMinSpeed   = 8.0
+	BouncySideAbsorb = 0.5
+	StickyDashMult   = 0.5
+	CrumbleTime      = 1.0
+	comboWindow      = 1.5
 
 	PixelsPerMeter = 30.0
 
