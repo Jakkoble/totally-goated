@@ -588,16 +588,22 @@ func (g *Goat) drawDashTrajectory(screen *ebiten.Image, offsetX, offsetY, camera
 
 	speed := Lerp(DashMinSpeed, DashMaxSpeed, g.ChargingPercentage())
 	speed *= g.DashSpeedMod
+
+	if g.HasSuperDash {
+		speed *= SuperDashMult
+	}
+	
 	vel := dir.Scale(speed)
 	pos := g.Pos
 
 	for i := range 40 {
-		pos = pos.Add(vel)
-		vel = vel.Scale(DashDrag)
-
-		if vel.Len() < 3.0 {
-			vel.Y += Gravity
+		vel.Y += Gravity
+		if vel.Y > MaxFallSpeed {
+			vel.Y = MaxFallSpeed
 		}
+		vel.X *= DashDrag
+		pos = pos.Add(vel)
+
 		if i%3 == 0 {
 			sx := pos.X + offsetX
 			sy := pos.Y + offsetY
