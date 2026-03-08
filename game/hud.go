@@ -25,12 +25,19 @@ func drawScaledText(screen *ebiten.Image, s string, x, y float64, scale float64,
 
 func drawHUD(screen *ebiten.Image, g *Game) {
 	meters := g.currentMeters()
-	meterStr := fmt.Sprintf("%d m", meters)
+	meterStr := fmt.Sprintf("%dm", meters)
 	drawScaledText(screen, meterStr, 16, 12, 1.8, color.NRGBA{255, 255, 255, 220})
 
 	if g.bellCount > 0 {
 		bellStr := fmt.Sprintf("Bells: %d", g.bellCount)
 		drawScaledText(screen, bellStr, 16, 38, 1.2, color.NRGBA{255, 210, 50, 220})
+	}
+
+	if g.comboCount > 1 {
+		comboStr := fmt.Sprintf("x%d COMBO!", g.comboCount)
+		pct := float32(g.comboTimer / comboWindow)
+		a := uint8(220 * pct)
+		drawScaledText(screen, comboStr, float64(ScreenWidth)/2-float64(len(comboStr))*6*0.8, 16, 1.6, color.NRGBA{255, 210, 50, a})
 	}
 
 	badgeX := float32(12)

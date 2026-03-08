@@ -60,8 +60,8 @@ func NewGoat(x, y float64) *Goat {
 		LastDashPlatIdx: -1,
 		Image:           goatImage,
 		DashSpeedMod:    1.0,
-		SquashX:      1.0,
-		SquashY:      1.0,
+		SquashX:         1.0,
+		SquashY:         1.0,
 	}
 }
 
@@ -123,12 +123,12 @@ func (g *Goat) updateAir(level *Level, game *Game) {
 	}
 
 	g.Pos = g.Pos.Add(g.Vel)
-	g.collectPowerUps(level)
+	g.collectPowerUps(level, game)
 	g.collectBells(level, game)
 	g.resolveCollisions(level, game)
 }
 
-func (g *Goat) collectPowerUps(level *Level) {
+func (g *Goat) collectPowerUps(level *Level, game *Game) {
 	gw := float64(g.Image.Bounds().Dx())
 	gh := float64(g.Image.Bounds().Dy())
 
@@ -144,16 +144,28 @@ func (g *Goat) collectPowerUps(level *Level) {
 			pu.Collected = true
 			sfxPowerup.Play()
 
+			var name string
 			switch pu.Type {
 			case PowerUpShield:
 				g.HasShield = true
+				name = "SHIELD"
 			case PowerUpSuperDash:
 				g.HasSuperDash = true
+				name = "SUPER DASH"
 			case PowerUpSlowFall:
 				g.SlowFallTimer = SlowFallDuration
+				name = "SLOW FALL"
 			case PowerUpDoubleJump:
 				g.HasDoubleJump = true
+				name = "DOUBLE JUMP"
 			}
+
+			if game != nil {
+				game.flashAlpha = 0.3
+				game.SpawnFloatingText(pu.Pos, name, color.NRGBA{255, 255, 255, 255})
+				game.AddShake(3)
+			}
+			g.Particles.SpawnImpactRing(pu.Pos)
 		}
 	}
 }
@@ -174,7 +186,7 @@ func (g *Goat) collectBells(level *Level, game *Game) {
 			b.Collected = true
 			sfxBellPickup.Play()
 			if game != nil {
-				game.bellCount++
+				game.OnBellCollected(b.Pos)
 			}
 		}
 	}
