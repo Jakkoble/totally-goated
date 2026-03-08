@@ -43,8 +43,8 @@ const (
 )
 
 func NewGame() *Game {
-	img := loadImageFromFS("assets/goat.png")
-	background := loadImageFromFS("assets/background.png")
+	img := loadImageFromFS("assets/textures/goat.png")
+	background := loadImageFromFS("assets/textures/background.png")
 
 	s := loadSave()
 	return &Game{
