@@ -36,8 +36,10 @@ type Goat struct {
 	Image        *ebiten.Image
 	DashSpeedMod float64
 
-	ChargeTime float64
-	Particles  ParticleSystem
+	ChargeTime        float64
+	DashCooldownTimer float64
+	LastDashPlatIdx   int
+	Particles         ParticleSystem
 
 	HasShield     bool
 	HasSuperDash  bool
@@ -52,11 +54,12 @@ type Goat struct {
 func NewGoat(x, y float64) *Goat {
 	goatImage := loadImageFromFS("assets/textures/goat.png")
 	return &Goat{
-		Pos:          Vec2{x, y},
-		FacingDir:    1,
-		WallPlatIdx:  -1,
-		Image:        goatImage,
-		DashSpeedMod: 1.0,
+		Pos:             Vec2{x, y},
+		FacingDir:       1,
+		WallPlatIdx:     -1,
+		LastDashPlatIdx: -1,
+		Image:           goatImage,
+		DashSpeedMod:    1.0,
 		SquashX:      1.0,
 		SquashY:      1.0,
 	}
@@ -184,7 +187,10 @@ func (g *Goat) updateWall(level *Level) {
 			return
 		}
 	}
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+	if g.DashCooldownTimer > 0 {
+		g.DashCooldownTimer -= 1.0 / float64(ebiten.TPS())
+	}
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) && g.DashCooldownTimer <= 0 {
 		g.State = StateCharging
 		g.ChargeTime = 0
 		return
@@ -250,7 +256,9 @@ func (g *Goat) updateCharging(level *Level, cameraY float64, game *Game) {
 		g.Vel = dir.Scale(speed)
 		g.State = StateAir
 		g.Wall = WallNone
+		g.LastDashPlatIdx = g.WallPlatIdx
 		g.WallPlatIdx = -1
+		g.DashCooldownTimer = DashCooldown
 
 		g.SquashX = 0.75
 		g.SquashY = 1.2
@@ -407,6 +415,9 @@ func (g *Goat) attachToWall(side WallSide, platIdx int, level *Level, game *Game
 	g.WallPlatIdx = platIdx
 	g.Vel = Vec2{}
 	g.ClingTimer = 0
+	if platIdx != g.LastDashPlatIdx {
+		g.DashCooldownTimer = 0
+	}
 
 	if side == WallLeft {
 		g.FacingDir = -1

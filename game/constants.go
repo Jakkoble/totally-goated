@@ -25,6 +25,8 @@ const (
 
 	AirControlAccel = 0.15
 
+	DashCooldown = 0.25
+
 	DeathMargin = 400.0
 
 	DoubleJumpSpeed = 12.0
