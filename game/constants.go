@@ -26,4 +26,6 @@ const (
 	AirControlAccel = 0.15
 
 	DeathMargin = 400.0
+
+	DoubleJumpSpeed = 12.0
 )

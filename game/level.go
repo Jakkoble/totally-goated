@@ -147,7 +147,7 @@ func (l *Level) GenerateUntil(targetY float64) {
 			l.Platforms = append(l.Platforms, p)
 
 			if l.index > 20 && rand.Float64() < PowerUpSpawnChance {
-				puType := PowerUpType(rand.IntN(3))
+				puType := PowerUpType(rand.IntN(4))
 				puX := (rand.Float64() - 0.5) * 80
 				puY := p.Y - 20 - rand.Float64()*40
 				if !l.powerUpOverlapsPlatform(puX, puY) {

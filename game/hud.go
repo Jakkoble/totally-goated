@@ -43,8 +43,13 @@ func drawHUD(screen *ebiten.Image, g *Game) {
 		badgeX += w + gap
 	}
 	if g.Goat.SlowFallTimer > 0 {
-		drawPowerUpBadge(screen, badgeX, badgeY, "SLOW FALL", g.Goat.SlowFallTimer,
+		w := drawPowerUpBadge(screen, badgeX, badgeY, "SLOW FALL", g.Goat.SlowFallTimer,
 			color.NRGBA{100, 230, 120, 200})
+		badgeX += w + gap
+	}
+	if g.Goat.HasDoubleJump {
+		drawPowerUpBadge(screen, badgeX, badgeY, "DOUBLE JUMP", -1,
+			color.NRGBA{200, 100, 255, 200})
 	}
 }
 
