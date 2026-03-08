@@ -3,9 +3,11 @@ package game
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"math/rand/v2"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 var (
@@ -221,6 +223,15 @@ func (l *Level) Draw(screen *ebiten.Image, cameraY, shakeX, shakeY float64) {
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(sx, sy)
 		screen.DrawImage(sub, op)
+
+		pw := float32(cropW)
+		ph := float32(cropH)
+		var topSkip float32
+		if p.Type != PlatIce {
+			topSkip = 6
+		}
+		vector.FillRect(screen, float32(sx), float32(sy)+topSkip, 5, ph-topSkip, color.NRGBA{0, 0, 0, 60}, false)
+		vector.FillRect(screen, float32(sx)+pw-2, float32(sy)+topSkip, 2, ph-topSkip, color.NRGBA{255, 255, 255, 40}, false)
 	}
 
 	for i := range l.PowerUps {
