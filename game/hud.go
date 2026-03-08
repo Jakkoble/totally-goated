@@ -34,7 +34,7 @@ func drawHUD(screen *ebiten.Image, g *Game) {
 	}
 
 	badgeX := float32(12)
-	badgeY := float32(46)
+	badgeY := float32(60)
 	gap := float32(6)
 
 	if g.Goat.HasShield {

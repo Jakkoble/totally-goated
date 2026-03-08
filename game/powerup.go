@@ -1,12 +1,9 @@
 package game
 
 import (
-	"image/color"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 type PowerUpType int
@@ -26,6 +23,20 @@ const (
 	SlowFallGravityMul = 0.45
 )
 
+var (
+	puShieldImg    *ebiten.Image
+	puSuperDashImg *ebiten.Image
+	puSlowFallImg  *ebiten.Image
+	puDoubleJmpImg *ebiten.Image
+)
+
+func loadPowerUpAssets() {
+	puShieldImg = loadImageFromFS("assets/textures/powerup_shield.png")
+	puSuperDashImg = loadImageFromFS("assets/textures/powerup_boostjump.png")
+	puSlowFallImg = loadImageFromFS("assets/textures/powerup_slowfall.png")
+	puDoubleJmpImg = loadImageFromFS("assets/textures/powerup_doublejump.png")
+}
+
 type PowerUp struct {
 	Pos       Vec2
 	Type      PowerUpType
@@ -44,32 +55,29 @@ func (pu *PowerUp) Draw(screen *ebiten.Image, cameraY, shakeX, shakeY float64) {
 	ox := float64(ScreenWidth)/2 + shakeX
 	oy := float64(ScreenHeight)/2 - cameraY + shakeY
 
-	sx := float32(pu.Pos.X + ox)
-	sy := float32(pu.Pos.Y + oy + math.Sin(pu.bobPhase)*4)
+	dx := pu.Pos.X + ox
+	dy := pu.Pos.Y + oy + math.Sin(pu.bobPhase)*4
 
-	var fill color.NRGBA
-	var symbol string
+	var img *ebiten.Image
 	switch pu.Type {
 	case PowerUpShield:
-		fill = color.NRGBA{80, 160, 255, 200}
-		symbol = "S"
+		img = puShieldImg
 	case PowerUpSuperDash:
-		fill = color.NRGBA{255, 100, 60, 200}
-		symbol = "D"
+		img = puSuperDashImg
 	case PowerUpSlowFall:
-		fill = color.NRGBA{100, 230, 120, 200}
-		symbol = "F"
+		img = puSlowFallImg
 	case PowerUpDoubleJump:
-		fill = color.NRGBA{200, 100, 255, 200}
-		symbol = "J"
+		img = puDoubleJmpImg
 	}
 
-	glow := fill
-	glow.A = 60
-	vector.FillCircle(screen, sx, sy, float32(PowerUpRadius+4), glow, true)
+	if img == nil {
+		return
+	}
 
-	vector.FillCircle(screen, sx, sy, float32(PowerUpRadius), fill, true)
-	vector.StrokeCircle(screen, sx, sy, float32(PowerUpRadius), 2, color.NRGBA{255, 255, 255, 180}, true)
-
-	ebitenutil.DebugPrintAt(screen, symbol, int(sx)-3, int(sy)-8)
+	op := &ebiten.DrawImageOptions{}
+	iw := float64(img.Bounds().Dx())
+	ih := float64(img.Bounds().Dy())
+	op.GeoM.Translate(-iw/2, -ih/2)
+	op.GeoM.Translate(dx, dy)
+	screen.DrawImage(img, op)
 }

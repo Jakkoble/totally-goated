@@ -15,7 +15,7 @@ const (
 var bellImage *ebiten.Image
 
 func loadBellAsset() {
-	bellImage = loadImageFromFS("assets/bell.png")
+	bellImage = loadImageFromFS("assets/textures/bell.png")
 }
 
 type Bell struct {

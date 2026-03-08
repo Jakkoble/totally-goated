@@ -39,9 +39,9 @@ type Goat struct {
 	ChargeTime float64
 	Particles  ParticleSystem
 
-	HasShield      bool
-	HasSuperDash   bool
-	SlowFallTimer  float64
+	HasShield     bool
+	HasSuperDash  bool
+	SlowFallTimer float64
 	HasDoubleJump bool
 
 	SquashX  float64
@@ -50,7 +50,7 @@ type Goat struct {
 }
 
 func NewGoat(x, y float64) *Goat {
-	goatImage := loadImageFromFS("assets/goat.png")
+	goatImage := loadImageFromFS("assets/textures/goat.png")
 	return &Goat{
 		Pos:          Vec2{x, y},
 		FacingDir:    1,
