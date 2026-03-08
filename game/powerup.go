@@ -1,9 +1,11 @@
 package game
 
 import (
+	"image/color"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 type PowerUpType int
@@ -17,10 +19,11 @@ const (
 
 const (
 	PowerUpRadius      = 14.0
-	PowerUpSpawnChance = 0.12
+	PowerUpSpawnChance = 0.10
 	SlowFallDuration   = 5.0
 	SuperDashMult      = 1.5
 	SlowFallGravityMul = 0.45
+	PowerUpMinGap      = 3
 )
 
 var (
@@ -73,6 +76,20 @@ func (pu *PowerUp) Draw(screen *ebiten.Image, cameraY, shakeX, shakeY float64) {
 	if img == nil {
 		return
 	}
+
+	var glowClr color.NRGBA
+	switch pu.Type {
+	case PowerUpShield:
+		glowClr = color.NRGBA{80, 160, 255, 50}
+	case PowerUpSuperDash:
+		glowClr = color.NRGBA{255, 100, 60, 50}
+	case PowerUpSlowFall:
+		glowClr = color.NRGBA{100, 230, 120, 50}
+	case PowerUpDoubleJump:
+		glowClr = color.NRGBA{200, 100, 255, 50}
+	}
+	glowR := float32(PowerUpRadius + 8 + math.Sin(pu.bobPhase*2)*3)
+	vector.FillCircle(screen, float32(dx), float32(dy), glowR, glowClr, true)
 
 	op := &ebiten.DrawImageOptions{}
 	iw := float64(img.Bounds().Dx())

@@ -8,7 +8,7 @@ import (
 
 const (
 	BellRadius      = 10.0
-	BellSpawnChance = 0.25
+	BellSpawnChance = 0.35
 	BellScoreValue  = 5
 )
 
