@@ -89,7 +89,9 @@ func (g *Goat) Update(level *Level, cameraY float64, game *Game) {
 func (g *Goat) updateAir(level *Level, game *Game) {
 	grav := Gravity
 	if g.SlowFallTimer > 0 {
-		grav *= SlowFallGravityMul
+		if g.Vel.Y > 0 {
+			grav *= SlowFallGravityMul
+		}
 		g.SlowFallTimer -= 1.0 / float64(ebiten.TPS())
 	}
 
