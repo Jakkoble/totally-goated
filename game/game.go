@@ -25,6 +25,7 @@ type Game struct {
 	bestScore  int
 	bestMeters int
 	bellCount  int
+	bellScore  int
 	bestBells  int
 	background *ebiten.Image
 	stars      *Starfield
@@ -32,6 +33,16 @@ type Game struct {
 	shakeMag   float64
 	shakeX     float64
 	shakeY     float64
+
+	floatingTexts []FloatingText
+	flashAlpha    float64
+
+	comboCount int
+	comboTimer float64
+
+	newBestScore  bool
+	newBestMeters bool
+	newBestBells  bool
 }
 
 type GameState int
@@ -65,6 +76,7 @@ func (g *Game) startGame() {
 	g.cameraY = 0
 	g.score = 0
 	g.bellCount = 0
+	g.bellScore = 0
 	g.state = GamePlaying
 }
 
@@ -84,6 +96,11 @@ func (g *Game) Update() error {
 		g.level.Update()
 		g.speedLines.Update(g.Goat.Vel)
 		g.updateShake()
+		g.updateFloatingTexts()
+		g.updateCombo()
+		if g.flashAlpha > 0 {
+			g.flashAlpha -= 3.0 / float64(ebiten.TPS())
+		}
 
 		height := -g.Goat.Pos.Y
 		if height > g.score {
@@ -97,7 +114,8 @@ func (g *Game) Update() error {
 
 		targetY := g.Goat.Pos.Y
 		if targetY < g.cameraY {
-			lerpSpeed := 0.08
+			speed := g.Goat.Vel.Len()
+			lerpSpeed := 0.06 + Clamp(speed/30.0, 0, 0.12)
 			g.cameraY += (targetY - g.cameraY) * lerpSpeed
 		}
 
@@ -118,6 +136,9 @@ func (g *Game) Update() error {
 				total := g.totalScore()
 				meters := g.currentMeters()
 				saveBest(total, meters, g.bellCount)
+				g.newBestScore = total > g.bestScore
+				g.newBestMeters = meters > g.bestMeters
+				g.newBestBells = g.bellCount > g.bestBells
 				if total > g.bestScore {
 					g.bestScore = total
 				}
@@ -143,8 +164,21 @@ func (g *Game) Update() error {
 	return nil
 }
 
+func (g *Game) skyColor() color.RGBA {
+	h := -g.cameraY / PixelsPerMeter
+	t := Clamp(h/500.0, 0, 1)
+	r := uint8(Lerp(30, 50, t))
+	gr := uint8(Lerp(30, 20, t))
+	b := uint8(Lerp(50, 70, t))
+	return color.RGBA{R: r, G: gr, B: b, A: 255}
+}
+
 func (g *Game) Draw(screen *ebiten.Image) {
-	screen.Fill(color.RGBA{R: 30, G: 30, B: 50, A: 255})
+	if g.state == GameMenu {
+		screen.Fill(color.RGBA{R: 30, G: 30, B: 50, A: 255})
+	} else {
+		screen.Fill(g.skyColor())
+	}
 	g.stars.Draw(screen, g.tick)
 	g.drawBackground(screen)
 
@@ -252,6 +286,18 @@ func (g *Game) drawMenu(screen *ebiten.Image) {
 	credit := "Jakob Schwendinger & Jakob Wassertheurer"
 	creditX := int(sw)/2 - len(credit)*6/2
 	ebitenutil.DebugPrintAt(screen, credit, creditX, int(sh)-24)
+
+	if g.bestScore > 0 {
+		bestStr := fmt.Sprintf("Best Score: %d  |  %dm  |  %d bells", g.bestScore, g.bestMeters, g.bestBells)
+		bw := float64(len(bestStr)) * 6
+		drawScaledText(screen, bestStr, sw/2-bw/2, sh*0.82, 1.0, color.NRGBA{255, 210, 50, 180})
+	}
+
+	if g.tick%60 < 40 {
+		prompt := "Click or Space to start"
+		pw := float64(len(prompt)) * 6
+		drawScaledText(screen, prompt, sw/2-pw*1.2/2, sh*0.88, 1.2, color.NRGBA{255, 255, 255, 200})
+	}
 }
 
 func (g *Game) AddShake(amount float64) {
@@ -273,7 +319,9 @@ func (g *Game) updateShake() {
 func (g *Game) drawGame(screen *ebiten.Image) {
 	g.level.Draw(screen, g.cameraY, g.shakeX, g.shakeY)
 	g.Goat.Draw(screen, g.cameraY, g.shakeX, g.shakeY)
+	g.drawFloatingTexts(screen, g.cameraY, g.shakeX, g.shakeY)
 	g.speedLines.Draw(screen)
+
 	drawHUD(screen, g)
 }
 
@@ -314,13 +362,38 @@ func (g *Game) drawGameOver(screen *ebiten.Image) {
 	bestMetersStr := fmt.Sprintf("%d m", g.bestMeters)
 	bestBellsStr := fmt.Sprintf("%d", g.bestBells)
 
+	newBestClr := color.NRGBA{255, 210, 50, 255}
+
 	drawScaledText(screen, "BEST", cx-120, cy+52, 1.0, dim)
+	scoreClr := dim
+	if g.newBestScore {
+		scoreClr = newBestClr
+	}
 	drawScaledText(screen, "Score:", cx-120, cy+70, 1.0, dim)
-	drawScaledText(screen, bestScoreStr, cx+20, cy+70, 1.0, dim)
+	drawScaledText(screen, bestScoreStr, cx+20, cy+70, 1.0, scoreClr)
+	if g.newBestScore {
+		drawScaledText(screen, "NEW!", cx+80, cy+70, 1.0, newBestClr)
+	}
+
+	metersClr := dim
+	if g.newBestMeters {
+		metersClr = newBestClr
+	}
 	drawScaledText(screen, "Height:", cx-120, cy+86, 1.0, dim)
-	drawScaledText(screen, bestMetersStr, cx+20, cy+86, 1.0, dim)
+	drawScaledText(screen, bestMetersStr, cx+20, cy+86, 1.0, metersClr)
+	if g.newBestMeters {
+		drawScaledText(screen, "NEW!", cx+80, cy+86, 1.0, newBestClr)
+	}
+
+	bellsClr := gold
+	if g.newBestBells {
+		bellsClr = newBestClr
+	}
 	drawScaledText(screen, "Bells:", cx-120, cy+102, 1.0, dim)
-	drawScaledText(screen, bestBellsStr, cx+20, cy+102, 1.0, gold)
+	drawScaledText(screen, bestBellsStr, cx+20, cy+102, 1.0, bellsClr)
+	if g.newBestBells {
+		drawScaledText(screen, "NEW!", cx+80, cy+102, 1.0, newBestClr)
+	}
 
 	if g.tick%60 < 40 {
 		prompt := "Click or Space to continue"
@@ -342,5 +415,34 @@ func (g *Game) currentMeters() int {
 }
 
 func (g *Game) totalScore() int {
-	return g.currentMeters() + g.bellCount*BellScoreValue
+	return g.currentMeters() + g.bellScore
+}
+
+func (g *Game) updateCombo() {
+	if g.comboTimer > 0 {
+		g.comboTimer -= 1.0 / float64(ebiten.TPS())
+		if g.comboTimer <= 0 {
+			g.comboCount = 0
+		}
+	}
+}
+
+func (g *Game) OnBellCollected(pos Vec2) {
+	g.bellCount++
+	g.comboCount++
+	g.comboTimer = comboWindow
+
+	mult := g.comboCount
+	if mult > 5 {
+		mult = 5
+	}
+	points := BellScoreValue * mult
+	g.bellScore += points
+
+	text := fmt.Sprintf("+%d", points)
+	if g.comboCount > 1 {
+		text = fmt.Sprintf("+%d x%d", points, mult)
+	}
+	g.SpawnFloatingText(pos, text, color.NRGBA{255, 210, 50, 255})
+	g.Goat.Particles.SpawnDust(pos, 6)
 }
