@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-const saveFile = "save.json"
+var saveFile = "save.json"
 
 type SaveData struct {
 	BestScore  int `json:"best_score"`
