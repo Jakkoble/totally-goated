@@ -332,11 +332,7 @@ func (g *Game) drawMenu(screen *ebiten.Image) {
 		op.GeoM.Translate(goatX, goatY)
 		screen.DrawImage(g.menuGoat, op)
 
-		cosmeticOp := ebiten.GeoM{}
-		cosmeticOp.Translate(-iw/2, -ih/2)
-		cosmeticOp.Scale(scale, scale)
-		cosmeticOp.Translate(sw/2, sh*0.42+bob)
-		DrawCosmetics(screen, g.equippedCosmetics, cosmeticOp)
+		DrawCosmetics(screen, g.equippedCosmetics, op.GeoM)
 	}
 
 	centerText := func(s string, y int) {
@@ -462,11 +458,7 @@ func (g *Game) drawShop(screen *ebiten.Image) {
 		op.GeoM.Translate(goatX, goatY)
 		screen.DrawImage(g.menuGoat, op)
 
-		cosmeticOp := ebiten.GeoM{}
-		cosmeticOp.Translate(-iw/2, -ih/2)
-		cosmeticOp.Scale(scale, scale)
-		cosmeticOp.Translate(sw*0.8, sh*0.5)
-		DrawCosmetics(screen, g.equippedCosmetics, cosmeticOp)
+		DrawCosmetics(screen, g.equippedCosmetics, op.GeoM)
 	}
 }
 

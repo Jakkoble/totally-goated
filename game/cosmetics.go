@@ -90,50 +90,49 @@ func DrawCosmetics(screen *ebiten.Image, equipped map[string]int, transform ebit
 
 func drawHat(screen *ebiten.Image, id int, transform ebiten.GeoM) {
 	// The goat sprite is 29x47. The head rests between x=14 and x=28, and the top of the head is at y=12.
-	// We translate by -14.5, -23.5. So the top of the head is at y = 12 - 23.5 = -11.5.
-	// The center of the head is around x = 21 - 14.5 = 6.5.
+	// All coordinates are top-left relative. So (0,0) is top-left of the 29x47 image space.
+	// The center of the head is around x = 21.
 
 	switch id {
 	case 1: // Top Hat
-		drawRectTransformed(screen, 0, -14, 15, 3, color.RGBA{30, 30, 30, 255}, transform) // Brim
-		drawRectTransformed(screen, 2, -24, 11, 10, color.RGBA{30, 30, 30, 255}, transform) // Top
-		drawRectTransformed(screen, 2, -16, 11, 2, color.RGBA{200, 50, 50, 255}, transform) // Red band
+		drawRectTransformed(screen, 14.5, 9.5, 15, 3, color.RGBA{30, 30, 30, 255}, transform) // Brim
+		drawRectTransformed(screen, 16.5, -0.5, 11, 10, color.RGBA{30, 30, 30, 255}, transform) // Top
+		drawRectTransformed(screen, 16.5, 7.5, 11, 2, color.RGBA{200, 50, 50, 255}, transform) // Red band
 	case 2: // Crown
 		// Base of crown
-		drawRectTransformed(screen, 2, -15, 11, 4, color.RGBA{255, 215, 0, 255}, transform)
+		drawRectTransformed(screen, 16.5, 8.5, 11, 4, color.RGBA{255, 215, 0, 255}, transform)
 		// Points
-		drawRectTransformed(screen, 2, -19, 3, 4, color.RGBA{255, 215, 0, 255}, transform)
-		drawRectTransformed(screen, 6, -20, 3, 5, color.RGBA{255, 215, 0, 255}, transform)
-		drawRectTransformed(screen, 10, -19, 3, 4, color.RGBA{255, 215, 0, 255}, transform)
+		drawRectTransformed(screen, 16.5, 4.5, 3, 4, color.RGBA{255, 215, 0, 255}, transform)
+		drawRectTransformed(screen, 20.5, 3.5, 3, 5, color.RGBA{255, 215, 0, 255}, transform)
+		drawRectTransformed(screen, 24.5, 4.5, 3, 4, color.RGBA{255, 215, 0, 255}, transform)
 	case 3: // Beanie
-		drawRectTransformed(screen, 1, -19, 13, 8, color.RGBA{50, 100, 200, 255}, transform)
+		drawRectTransformed(screen, 15.5, 4.5, 13, 8, color.RGBA{50, 100, 200, 255}, transform)
 		// Pom pom
-		drawRectTransformed(screen, 5, -23, 5, 5, color.RGBA{200, 200, 200, 255}, transform)
+		drawRectTransformed(screen, 19.5, 0.5, 5, 5, color.RGBA{200, 200, 200, 255}, transform)
 	case 4: // Halo
-		drawRectTransformed(screen, 0, -20, 15, 2, color.RGBA{255, 255, 100, 200}, transform)
-		drawRectTransformed(screen, 0, -19, 2, 2, color.RGBA{255, 255, 100, 200}, transform)
-		drawRectTransformed(screen, 13, -19, 2, 2, color.RGBA{255, 255, 100, 200}, transform)
+		drawRectTransformed(screen, 14.5, 3.5, 15, 2, color.RGBA{255, 255, 100, 200}, transform)
+		drawRectTransformed(screen, 14.5, 4.5, 2, 2, color.RGBA{255, 255, 100, 200}, transform)
+		drawRectTransformed(screen, 27.5, 4.5, 2, 2, color.RGBA{255, 255, 100, 200}, transform)
 	}
 }
 
 func drawShoes(screen *ebiten.Image, id int, transform ebiten.GeoM) {
 	// The goat sprite is 29x47. The legs are roughly at x=4, 9, 14, 19 and go down to y=47.
-	// We translate by -14.5, -23.5. So the bottom of the feet are at y = 47 - 23.5 = 23.5.
-	// The legs are at x = 4-14.5=-10.5, 9-14.5=-5.5, 14-14.5=-0.5, 19-14.5=4.5.
+	// All coordinates are top-left relative.
 
 	switch id {
 	case 5: // Sneakers
-		drawRectTransformed(screen, -11, 20, 7, 3, color.RGBA{200, 50, 50, 255}, transform) // Back legs (covers 2 back legs)
-		drawRectTransformed(screen, -11, 23, 7, 1, color.RGBA{255, 255, 255, 255}, transform)
+		drawRectTransformed(screen, 3.5, 43.5, 7, 3, color.RGBA{200, 50, 50, 255}, transform) // Back legs
+		drawRectTransformed(screen, 3.5, 46.5, 7, 1, color.RGBA{255, 255, 255, 255}, transform)
 
-		drawRectTransformed(screen, -1, 20, 7, 3, color.RGBA{200, 50, 50, 255}, transform) // Front legs (covers 2 front legs)
-		drawRectTransformed(screen, -1, 23, 7, 1, color.RGBA{255, 255, 255, 255}, transform)
+		drawRectTransformed(screen, 13.5, 43.5, 7, 3, color.RGBA{200, 50, 50, 255}, transform) // Front legs
+		drawRectTransformed(screen, 13.5, 46.5, 7, 1, color.RGBA{255, 255, 255, 255}, transform)
 	case 6: // Boots
-		drawRectTransformed(screen, -11, 16, 7, 8, color.RGBA{100, 50, 20, 255}, transform) // Back legs
-		drawRectTransformed(screen, -1, 16, 7, 8, color.RGBA{100, 50, 20, 255}, transform) // Front legs
+		drawRectTransformed(screen, 3.5, 39.5, 7, 8, color.RGBA{100, 50, 20, 255}, transform) // Back legs
+		drawRectTransformed(screen, 13.5, 39.5, 7, 8, color.RGBA{100, 50, 20, 255}, transform) // Front legs
 	case 7: // Golden Hooves
-		drawRectTransformed(screen, -11, 21, 7, 3, color.RGBA{255, 215, 0, 255}, transform) // Back legs
-		drawRectTransformed(screen, -1, 21, 7, 3, color.RGBA{255, 215, 0, 255}, transform) // Front legs
+		drawRectTransformed(screen, 3.5, 44.5, 7, 3, color.RGBA{255, 215, 0, 255}, transform) // Back legs
+		drawRectTransformed(screen, 13.5, 44.5, 7, 3, color.RGBA{255, 215, 0, 255}, transform) // Front legs
 	}
 }
 
