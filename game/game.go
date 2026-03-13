@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -43,6 +44,11 @@ type Game struct {
 	newBestScore  bool
 	newBestMeters bool
 	newBestBells  bool
+
+	playerName         []rune
+	leaderboard        []ScoreEntry
+	leaderboardLoading bool
+	leaderboardMutex   sync.Mutex
 }
 
 type GameState int
@@ -51,7 +57,14 @@ const (
 	GameMenu GameState = iota
 	GamePlaying
 	GameOver
+	GameSubmitScore
+	GameLeaderboard
 )
+
+type ScoreEntry struct {
+	Name  string `json:"name"`
+	Score int    `json:"score"`
+}
 
 func NewGame() *Game {
 	img := loadImageFromFS("assets/textures/goat.png")
@@ -86,7 +99,10 @@ func (g *Game) Update() error {
 
 	switch g.state {
 	case GameMenu:
-		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) ||
+		if inpututil.IsKeyJustPressed(ebiten.KeyL) {
+			g.state = GameLeaderboard
+			g.fetchLeaderboard()
+		} else if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) ||
 			inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 			g.startGame()
 		}
@@ -155,8 +171,31 @@ func (g *Game) Update() error {
 		g.level.GenerateUntil(g.cameraY - 1000)
 
 	case GameOver:
-		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) ||
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+			g.state = GameSubmitScore
+			g.playerName = nil
+		} else if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) ||
 			inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+			g.state = GameMenu
+		}
+
+	case GameSubmitScore:
+		g.playerName = ebiten.AppendInputChars(g.playerName)
+
+		if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) && len(g.playerName) > 0 {
+			g.playerName = g.playerName[:len(g.playerName)-1]
+		}
+
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) && len(g.playerName) > 0 {
+			g.state = GameLeaderboard
+			g.submitScoreAsync(string(g.playerName), g.totalScore())
+		}
+
+	case GameLeaderboard:
+		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) ||
+			inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) ||
+			inpututil.IsKeyJustPressed(ebiten.KeySpace) ||
+			inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			g.state = GameMenu
 		}
 	}
@@ -190,6 +229,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	case GameOver:
 		g.drawGame(screen)
 		g.drawGameOver(screen)
+	case GameSubmitScore:
+		g.drawGame(screen)
+		g.drawSubmitScore(screen)
+	case GameLeaderboard:
+		g.drawGame(screen)
+		g.drawLeaderboard(screen)
 	}
 }
 
@@ -286,6 +331,10 @@ func (g *Game) drawMenu(screen *ebiten.Image) {
 		pw := float64(len(prompt)) * 6
 		drawScaledText(screen, prompt, sw/2-pw*1.2/2, sh*0.88, 1.2, color.NRGBA{255, 255, 255, 200})
 	}
+
+	leaderboardStr := "Press L for Leaderboard"
+	lw := float64(len(leaderboardStr)) * 6
+	drawScaledText(screen, leaderboardStr, sw/2-lw*0.8/2, sh*0.94, 0.8, color.NRGBA{180, 180, 180, 180})
 }
 
 func (g *Game) AddShake(amount float64) {
@@ -382,11 +431,91 @@ func (g *Game) drawGameOver(screen *ebiten.Image) {
 	drawScaledText(screen, "Bells:", cx-100, cy+102+yOff, 1.0, dim)
 	drawScaledText(screen, bestBellsStr, cx+40, cy+102+yOff, 1.0, bellsClr)
 
+	prompt1 := "ENTER to submit score"
+	pw1 := float64(len(prompt1)) * 6
+	drawScaledText(screen, prompt1, cx-pw1/2, cy+130+yOff, 1.0, white)
+
 	if g.tick%60 < 40 {
-		prompt := "Click or Space to continue"
-		pw := float64(len(prompt)) * 6
-		drawScaledText(screen, prompt, cx-pw/2, cy+130+yOff, 1.0, dim)
+		prompt2 := "Click or Space to continue"
+		pw2 := float64(len(prompt2)) * 6
+		drawScaledText(screen, prompt2, cx-pw2/2, cy+146+yOff, 1.0, dim)
 	}
+}
+
+func (g *Game) drawSubmitScore(screen *ebiten.Image) {
+	vector.FillRect(screen, 0, 0, float32(ScreenWidth), float32(ScreenHeight),
+		color.RGBA{0, 0, 0, 200}, false)
+
+	cx := float64(ScreenWidth) / 2
+	cy := float64(ScreenHeight) / 2
+
+	title := "SUBMIT SCORE"
+	drawScaledText(screen, title, cx-float64(len(title))*6*1.5/2, cy-60, 1.5, color.NRGBA{255, 210, 50, 255})
+
+	scoreStr := fmt.Sprintf("Score: %d", g.totalScore())
+	drawScaledText(screen, scoreStr, cx-float64(len(scoreStr))*6/2, cy-20, 1.0, color.NRGBA{255, 255, 255, 220})
+
+	prompt := "Enter your name:"
+	drawScaledText(screen, prompt, cx-float64(len(prompt))*6/2, cy+10, 1.0, color.NRGBA{180, 180, 180, 220})
+
+	nameStr := string(g.playerName)
+	if g.tick%60 < 30 {
+		nameStr += "_"
+	}
+	drawScaledText(screen, nameStr, cx-float64(len(nameStr))*6*1.2/2, cy+30, 1.2, color.NRGBA{255, 255, 255, 255})
+
+	footer := "ENTER to submit | ESC to cancel"
+	drawScaledText(screen, footer, cx-float64(len(footer))*6*0.8/2, cy+80, 0.8, color.NRGBA{180, 180, 180, 180})
+}
+
+func (g *Game) drawLeaderboard(screen *ebiten.Image) {
+	vector.FillRect(screen, 0, 0, float32(ScreenWidth), float32(ScreenHeight),
+		color.RGBA{0, 0, 0, 200}, false)
+
+	cx := float64(ScreenWidth) / 2
+	cy := float64(ScreenHeight) * 0.15
+
+	title := "TOP 10 GOATS"
+	drawScaledText(screen, title, cx-float64(len(title))*6*1.5/2, cy, 1.5, color.NRGBA{255, 210, 50, 255})
+
+	y := cy + 40
+
+	g.leaderboardMutex.Lock()
+	loading := g.leaderboardLoading
+	entries := g.leaderboard
+	g.leaderboardMutex.Unlock()
+
+	if loading {
+		loadingStr := "Loading..."
+		drawScaledText(screen, loadingStr, cx-float64(len(loadingStr))*6/2, y, 1.0, color.NRGBA{255, 255, 255, 200})
+	} else if len(entries) == 0 {
+		empty := "No scores yet. Be the first!"
+		drawScaledText(screen, empty, cx-float64(len(empty))*6/2, y, 1.0, color.NRGBA{180, 180, 180, 200})
+	} else {
+		for i, entry := range entries {
+			rankStr := fmt.Sprintf("#%d", i+1)
+			nameStr := entry.Name
+			scoreStr := fmt.Sprintf("%d", entry.Score)
+
+			c := color.NRGBA{255, 255, 255, 220}
+			if i == 0 {
+				c = color.NRGBA{255, 210, 50, 255} // Gold
+			} else if i == 1 {
+				c = color.NRGBA{200, 200, 200, 255} // Silver
+			} else if i == 2 {
+				c = color.NRGBA{205, 127, 50, 255} // Bronze
+			}
+
+			drawScaledText(screen, rankStr, cx-150, y, 1.0, c)
+			drawScaledText(screen, nameStr, cx-80, y, 1.0, c)
+			drawScaledText(screen, scoreStr, cx+100, y, 1.0, c)
+
+			y += 24
+		}
+	}
+
+	footer := "Click or Space to return"
+	drawScaledText(screen, footer, cx-float64(len(footer))*6*0.8/2, float64(ScreenHeight)*0.9, 0.8, color.NRGBA{180, 180, 180, 180})
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {

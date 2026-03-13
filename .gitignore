@@ -30,4 +30,6 @@ build/
 save.json
 *.tar.gz
 wasm/game.wasm
-wasm/wasm_exec.js
+wasm/wasm_exec.jsleaderboard.db
+server_bin
+totally-goated
