@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"math"
 	"math/rand/v2"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -41,6 +42,8 @@ const (
 	PlatIce
 	PlatCrumbly
 	PlatSticky
+	PlatCloud
+	PlatGhost
 )
 
 type Platform struct {
@@ -51,6 +54,8 @@ type Platform struct {
 	CrumbleTimer   float64
 	CrumbleStarted bool
 	Destroyed      bool
+	PhaseTimer     float64
+	CloudMoving    bool
 }
 
 type Level struct {
@@ -123,6 +128,8 @@ func (l *Level) GenerateUntil(targetY float64) {
 			iceEnd := bouncyEnd + 0.03 + diff*0.08
 			crumblyEnd := iceEnd + 0.02 + diff*0.12
 			stickyEnd := crumblyEnd + 0.02 + diff*0.10
+			cloudEnd := stickyEnd + 0.02 + diff*0.08
+			ghostEnd := cloudEnd + 0.02 + diff*0.08
 
 			if roll < specialChance {
 				switch {
@@ -132,9 +139,13 @@ func (l *Level) GenerateUntil(targetY float64) {
 					platType = PlatIce
 				case roll < crumblyEnd:
 					platType = PlatCrumbly
+				case roll < stickyEnd:
+					platType = PlatSticky
+				case roll < cloudEnd:
+					platType = PlatCloud
 				default:
-					if roll < stickyEnd {
-						platType = PlatSticky
+					if roll < ghostEnd {
+						platType = PlatGhost
 					}
 				}
 			}
@@ -154,7 +165,7 @@ func (l *Level) GenerateUntil(targetY float64) {
 
 			l.sinceLastPowerUp++
 			if l.index > 3 && l.sinceLastPowerUp >= PowerUpMinGap && rand.Float64() < PowerUpSpawnChance {
-				puType := PowerUpType(rand.IntN(4))
+				puType := PowerUpType(rand.IntN(6))
 				puX := (rand.Float64() - 0.5) * 100
 				puY := p.Y - 30 - rand.Float64()*50
 				if !l.powerUpOverlapsPlatform(puX, puY) {
@@ -203,6 +214,10 @@ func (l *Level) Draw(screen *ebiten.Image, cameraY, shakeX, shakeY float64) {
 			tile = crumblyTiles[p.TileIndex]
 		case PlatSticky:
 			tile = stickyTiles[p.TileIndex]
+		case PlatCloud:
+			tile = iceTiles[p.TileIndex] // Reusing ice tiles
+		case PlatGhost:
+			tile = rockTiles[p.TileIndex] // Reusing rock tiles
 		default:
 			tile = rockTiles[p.TileIndex]
 		}
@@ -221,6 +236,14 @@ func (l *Level) Draw(screen *ebiten.Image, cameraY, shakeX, shakeY float64) {
 		sub := tile.SubImage(image.Rect(cropX, 0, cropX+cropW, cropH)).(*ebiten.Image)
 
 		op := &ebiten.DrawImageOptions{}
+
+		if p.Type == PlatCloud {
+			op.ColorScale.ScaleWithColor(color.NRGBA{255, 255, 255, 200})
+		} else if p.Type == PlatGhost {
+			alpha := uint8(127 + 127*math.Sin(p.PhaseTimer*3.0))
+			op.ColorScale.ScaleWithColor(color.NRGBA{100, 200, 255, alpha})
+		}
+
 		op.GeoM.Translate(sx, sy)
 		screen.DrawImage(sub, op)
 
@@ -253,6 +276,10 @@ func (l *Level) Update() {
 				p.Destroyed = true
 				sfxCrumble.Play()
 			}
+		} else if p.Type == PlatGhost {
+			p.PhaseTimer += dt
+		} else if p.Type == PlatCloud && p.CloudMoving {
+			p.Y -= 1.0 // move up
 		}
 	}
 	for i := range l.PowerUps {

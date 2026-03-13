@@ -15,6 +15,8 @@ const (
 	PowerUpSuperDash
 	PowerUpSlowFall
 	PowerUpDoubleJump
+	PowerUpMagnet
+	PowerUpChili
 )
 
 const (
@@ -24,6 +26,10 @@ const (
 	SuperDashMult      = 1.5
 	SlowFallGravityMul = 0.45
 	PowerUpMinGap      = 3
+	MagnetDuration     = 8.0
+	MagnetRadius       = 150.0
+	ChiliDuration      = 3.0
+	ChiliUpwardSpeed   = -25.0
 )
 
 var (
@@ -71,6 +77,10 @@ func (pu *PowerUp) Draw(screen *ebiten.Image, cameraY, shakeX, shakeY float64) {
 		img = puSlowFallImg
 	case PowerUpDoubleJump:
 		img = puDoubleJmpImg
+	case PowerUpMagnet:
+		img = puShieldImg
+	case PowerUpChili:
+		img = puSuperDashImg
 	}
 
 	if img == nil {
@@ -87,6 +97,10 @@ func (pu *PowerUp) Draw(screen *ebiten.Image, cameraY, shakeX, shakeY float64) {
 		glowClr = color.NRGBA{100, 230, 120, 50}
 	case PowerUpDoubleJump:
 		glowClr = color.NRGBA{200, 100, 255, 50}
+	case PowerUpMagnet:
+		glowClr = color.NRGBA{255, 255, 50, 50}
+	case PowerUpChili:
+		glowClr = color.NRGBA{255, 50, 50, 50}
 	}
 	glowR := float32(PowerUpRadius + 8 + math.Sin(pu.bobPhase*2)*3)
 	vector.FillCircle(screen, float32(dx), float32(dy), glowR, glowClr, true)
@@ -95,6 +109,14 @@ func (pu *PowerUp) Draw(screen *ebiten.Image, cameraY, shakeX, shakeY float64) {
 	iw := float64(img.Bounds().Dx())
 	ih := float64(img.Bounds().Dy())
 	op.GeoM.Translate(-iw/2, -ih/2)
+
+	switch pu.Type {
+	case PowerUpMagnet:
+		op.ColorScale.ScaleWithColor(color.NRGBA{255, 255, 50, 255})
+	case PowerUpChili:
+		op.ColorScale.ScaleWithColor(color.NRGBA{255, 50, 50, 255})
+	}
+
 	op.GeoM.Translate(dx, dy)
 	screen.DrawImage(img, op)
 }

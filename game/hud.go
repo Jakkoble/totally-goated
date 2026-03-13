@@ -45,27 +45,37 @@ func drawHUD(screen *ebiten.Image, g *Game) {
 	gap := float32(6)
 
 	if g.Goat.HasShield {
-		w := drawPowerUpBadge(screen, badgeX, badgeY, "SHIELD", -1,
+		w := drawPowerUpBadge(screen, badgeX, badgeY, "SHIELD", -1, -1,
 			color.NRGBA{80, 160, 255, 200})
 		badgeX += w + gap
 	}
 	if g.Goat.HasSuperDash {
-		w := drawPowerUpBadge(screen, badgeX, badgeY, "SUPER DASH", -1,
+		w := drawPowerUpBadge(screen, badgeX, badgeY, "SUPER DASH", -1, -1,
 			color.NRGBA{255, 100, 60, 200})
 		badgeX += w + gap
 	}
 	if g.Goat.SlowFallTimer > 0 {
-		w := drawPowerUpBadge(screen, badgeX, badgeY, "SLOW FALL", g.Goat.SlowFallTimer,
+		w := drawPowerUpBadge(screen, badgeX, badgeY, "SLOW FALL", g.Goat.SlowFallTimer, SlowFallDuration,
 			color.NRGBA{100, 230, 120, 200})
 		badgeX += w + gap
 	}
+	if g.Goat.MagnetTimer > 0 {
+		w := drawPowerUpBadge(screen, badgeX, badgeY, "MAGNET", g.Goat.MagnetTimer, MagnetDuration,
+			color.NRGBA{255, 255, 50, 200})
+		badgeX += w + gap
+	}
+	if g.Goat.ChiliTimer > 0 {
+		w := drawPowerUpBadge(screen, badgeX, badgeY, "CHILI", g.Goat.ChiliTimer, ChiliDuration,
+			color.NRGBA{255, 50, 50, 200})
+		badgeX += w + gap
+	}
 	if g.Goat.HasDoubleJump {
-		drawPowerUpBadge(screen, badgeX, badgeY, "DOUBLE JUMP", -1,
+		drawPowerUpBadge(screen, badgeX, badgeY, "DOUBLE JUMP", -1, -1,
 			color.NRGBA{200, 100, 255, 200})
 	}
 }
 
-func drawPowerUpBadge(screen *ebiten.Image, x, y float32, label string, timer float64, clr color.NRGBA) float32 {
+func drawPowerUpBadge(screen *ebiten.Image, x, y float32, label string, timer float64, maxTimer float64, clr color.NRGBA) float32 {
 	text := label
 	if timer > 0 {
 		text = fmt.Sprintf("%s %.1fs", label, timer)
@@ -88,7 +98,7 @@ func drawPowerUpBadge(screen *ebiten.Image, x, y float32, label string, timer fl
 		barX := x + pad
 		barY := y + badgeH - 4
 		barW := badgeW - pad*2
-		pct := float32(timer / SlowFallDuration)
+		pct := float32(timer / maxTimer)
 		if pct > 1 {
 			pct = 1
 		}

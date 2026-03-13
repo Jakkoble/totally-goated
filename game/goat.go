@@ -45,6 +45,8 @@ type Goat struct {
 	HasSuperDash  bool
 	SlowFallTimer float64
 	HasDoubleJump bool
+	MagnetTimer   float64
+	ChiliTimer    float64
 
 	SquashX  float64
 	SquashY  float64
@@ -91,29 +93,59 @@ func (g *Goat) Update(level *Level, cameraY float64, game *Game) {
 }
 
 func (g *Goat) updateAir(level *Level, game *Game) {
-	grav := Gravity
-	if g.SlowFallTimer > 0 {
-		if g.Vel.Y > 0 {
-			grav *= SlowFallGravityMul
+	dt := 1.0 / float64(ebiten.TPS())
+
+	if g.MagnetTimer > 0 {
+		g.MagnetTimer -= dt
+		for i := range level.Bells {
+			b := &level.Bells[i]
+			if !b.Collected {
+				dx := g.Pos.X - b.Pos.X
+				dy := g.Pos.Y - b.Pos.Y
+				dist := math.Sqrt(dx*dx + dy*dy)
+				if dist < MagnetRadius {
+					b.Pos.X += (dx / dist) * 8.0
+					b.Pos.Y += (dy / dist) * 8.0
+				}
+			}
 		}
-		g.SlowFallTimer -= 1.0 / float64(ebiten.TPS())
 	}
 
-	g.Vel.Y += grav
-	if g.Vel.Y > MaxFallSpeed {
-		g.Vel.Y = MaxFallSpeed
+	if g.ChiliTimer > 0 {
+		g.ChiliTimer -= dt
+		g.Vel.Y = ChiliUpwardSpeed
+		g.Vel.X *= 0.95
+		g.Particles.SpawnDashSparks(g.Pos, Vec2{0, 1}, 2)
+		if g.ChiliTimer <= 0 {
+			g.Vel.Y = -10 // some residual upward momentum
+		}
+	} else {
+		grav := Gravity
+		if g.SlowFallTimer > 0 {
+			if g.Vel.Y > 0 {
+				grav *= SlowFallGravityMul
+			}
+			g.SlowFallTimer -= dt
+		}
+
+		g.Vel.Y += grav
+		if g.Vel.Y > MaxFallSpeed {
+			g.Vel.Y = MaxFallSpeed
+		}
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyLeft) {
-		g.Vel.X -= AirControlAccel
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyRight) {
-		g.Vel.X += AirControlAccel
+	if g.ChiliTimer <= 0 {
+		if ebiten.IsKeyPressed(ebiten.KeyA) || ebiten.IsKeyPressed(ebiten.KeyLeft) {
+			g.Vel.X -= AirControlAccel
+		}
+		if ebiten.IsKeyPressed(ebiten.KeyD) || ebiten.IsKeyPressed(ebiten.KeyRight) {
+			g.Vel.X += AirControlAccel
+		}
 	}
 
 	g.Vel.X *= DashDrag
 
-	if g.HasDoubleJump && inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+	if g.HasDoubleJump && inpututil.IsKeyJustPressed(ebiten.KeySpace) && g.ChiliTimer <= 0 {
 		g.Vel.Y = -DoubleJumpSpeed
 		g.HasDoubleJump = false
 		g.SquashX = 0.8
@@ -158,6 +190,13 @@ func (g *Goat) collectPowerUps(level *Level, game *Game) {
 			case PowerUpDoubleJump:
 				g.HasDoubleJump = true
 				name = "DOUBLE JUMP"
+			case PowerUpMagnet:
+				g.MagnetTimer = MagnetDuration
+				name = "MAGNET"
+			case PowerUpChili:
+				g.ChiliTimer = ChiliDuration
+				name = "CHILI BLAST"
+				g.State = StateAir // Force detach if on wall
 			}
 
 			if game != nil {
@@ -194,10 +233,18 @@ func (g *Goat) collectBells(level *Level, game *Game) {
 
 func (g *Goat) updateWall(level *Level) {
 	if g.WallPlatIdx >= 0 && g.WallPlatIdx < len(level.Platforms) {
-		if level.Platforms[g.WallPlatIdx].Destroyed {
+		p := &level.Platforms[g.WallPlatIdx]
+		if p.Destroyed {
 			g.detachFromWall()
 			return
 		}
+		if p.Type == PlatGhost && math.Sin(p.PhaseTimer*3.0) < -0.8 {
+			g.detachFromWall()
+			return
+		}
+	} else {
+		g.detachFromWall()
+		return
 	}
 	if g.DashCooldownTimer > 0 {
 		g.DashCooldownTimer -= 1.0 / float64(ebiten.TPS())
@@ -218,6 +265,10 @@ func (g *Goat) updateWall(level *Level) {
 	g.Vel.Y = slideSpeed
 	g.Vel.X = 0
 	g.Pos.Y += g.Vel.Y
+	if p.Type == PlatCloud && p.CloudMoving {
+		g.Pos.Y -= 1.0
+	}
+
 	g.ClingTimer++
 
 	g.checkStillOnWall(level)
@@ -225,11 +276,20 @@ func (g *Goat) updateWall(level *Level) {
 
 func (g *Goat) updateCharging(level *Level, cameraY float64, game *Game) {
 	if g.WallPlatIdx >= 0 && g.WallPlatIdx < len(level.Platforms) {
-		if level.Platforms[g.WallPlatIdx].Destroyed {
+		p := &level.Platforms[g.WallPlatIdx]
+		if p.Destroyed {
 			g.detachFromWall()
 			return
 		}
+		if p.Type == PlatGhost && math.Sin(p.PhaseTimer*3.0) < -0.8 {
+			g.detachFromWall()
+			return
+		}
+	} else {
+		g.detachFromWall()
+		return
 	}
+
 	dt := 1.0 / float64(ebiten.TPS())
 	g.ChargeTime += dt
 	if g.ChargeTime > FullChargeTime {
@@ -237,12 +297,14 @@ func (g *Goat) updateCharging(level *Level, cameraY float64, game *Game) {
 	}
 
 	slideSpeed := WallSlideSpeed
-	if g.WallPlatIdx >= 0 && g.WallPlatIdx < len(level.Platforms) {
-		if level.Platforms[g.WallPlatIdx].Type == PlatIce {
-			slideSpeed = IceSlideSpeed
-		}
+	p := &level.Platforms[g.WallPlatIdx]
+	if p.Type == PlatIce {
+		slideSpeed = IceSlideSpeed
 	}
 	g.Pos.Y += slideSpeed
+	if p.Type == PlatCloud && p.CloudMoving {
+		g.Pos.Y -= 1.0
+	}
 	g.ClingTimer++
 
 	if !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
@@ -369,6 +431,12 @@ func (g *Goat) resolveCollisions(level *Level, game *Game) {
 func (g *Goat) attachToWall(side WallSide, platIdx int, level *Level, game *Game) {
 	p := &level.Platforms[platIdx]
 
+	if p.Type == PlatGhost && math.Sin(p.PhaseTimer*3.0) < -0.8 {
+		// Cannot attach to transparent ghost platforms
+		g.Vel.X = -g.Vel.X * 0.5
+		return
+	}
+
 	wasMoving := g.Vel.Len() > 2
 	impactSpeed := g.Vel.Len()
 
@@ -419,6 +487,8 @@ func (g *Goat) attachToWall(side WallSide, platIdx int, level *Level, game *Game
 	g.DashSpeedMod = 1.0
 	if p.Type == PlatSticky {
 		g.DashSpeedMod = StickyDashMult
+	} else if p.Type == PlatCloud {
+		p.CloudMoving = true
 	}
 
 	g.State = StateWall
