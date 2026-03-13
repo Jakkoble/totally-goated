@@ -468,7 +468,7 @@ func (g *Goat) aimDir(cameraY float64) Vec2 {
 	return dir
 }
 
-func (g *Goat) Draw(screen *ebiten.Image, cameraY, shakeX, shakeY float64) {
+func (g *Goat) Draw(screen *ebiten.Image, cameraY, shakeX, shakeY float64, equippedCosmetics map[string]int) {
 	g.Particles.Draw(screen, cameraY, shakeX, shakeY)
 
 	offsetX := float64(ScreenWidth)/2 + shakeX
@@ -505,6 +505,9 @@ func (g *Goat) Draw(screen *ebiten.Image, cameraY, shakeX, shakeY float64) {
 	op.GeoM.Rotate(g.Rotation)
 	op.GeoM.Translate(g.Pos.X+offsetX, g.Pos.Y+offsetY)
 	screen.DrawImage(g.Image, op)
+
+	// Draw cosmetics using the same transformation matrix
+	DrawCosmetics(screen, equippedCosmetics, op.GeoM)
 }
 
 func (g *Goat) ChargingPercentage() float64 {

@@ -43,6 +43,14 @@ type Game struct {
 	newBestScore  bool
 	newBestMeters bool
 	newBestBells  bool
+
+	totalBells        int
+	unlockedCosmetics []int
+	equippedCosmetics map[string]int
+
+	shopSelection    int
+	shopMessage      string
+	shopMessageTimer int
 }
 
 type GameState int
@@ -51,6 +59,7 @@ const (
 	GameMenu GameState = iota
 	GamePlaying
 	GameOver
+	GameShop
 )
 
 func NewGame() *Game {
@@ -58,15 +67,22 @@ func NewGame() *Game {
 	background := loadImageFromFS("assets/textures/background.png")
 
 	s := loadSave()
+	if s.EquippedCosmetics == nil {
+		s.EquippedCosmetics = make(map[string]int)
+	}
+
 	return &Game{
-		state:      GameMenu,
-		menuGoat:   img,
-		bestScore:  s.BestScore,
-		bestMeters: s.BestMeters,
-		bestBells:  s.BestBells,
-		background: background,
-		stars:      NewStarfield(),
-		speedLines: &SpeedLines{},
+		state:             GameMenu,
+		menuGoat:          img,
+		bestScore:         s.BestScore,
+		bestMeters:        s.BestMeters,
+		bestBells:         s.BestBells,
+		totalBells:        s.TotalBells,
+		unlockedCosmetics: s.UnlockedCosmetics,
+		equippedCosmetics: s.EquippedCosmetics,
+		background:        background,
+		stars:             NewStarfield(),
+		speedLines:        &SpeedLines{},
 	}
 }
 
@@ -86,7 +102,12 @@ func (g *Game) Update() error {
 
 	switch g.state {
 	case GameMenu:
-		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) ||
+		if inpututil.IsKeyJustPressed(ebiten.KeyS) {
+			g.state = GameShop
+			g.shopSelection = 0
+			g.shopMessage = ""
+			g.shopMessageTimer = 0
+		} else if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) ||
 			inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 			g.startGame()
 		}
@@ -135,7 +156,10 @@ func (g *Game) Update() error {
 				sfxDeath.Play()
 				total := g.totalScore()
 				meters := g.currentMeters()
-				saveBest(total, meters, g.bellCount)
+
+				g.totalBells += g.bellCount
+				saveBest(total, meters, g.bellCount, g.totalBells, g.unlockedCosmetics, g.equippedCosmetics)
+
 				g.newBestScore = total > g.bestScore
 				g.newBestMeters = meters > g.bestMeters
 				g.newBestBells = g.bellCount > g.bestBells
@@ -158,6 +182,70 @@ func (g *Game) Update() error {
 		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) ||
 			inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 			g.state = GameMenu
+		}
+
+	case GameShop:
+		if g.shopMessageTimer > 0 {
+			g.shopMessageTimer--
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+			saveState(g.totalBells, g.unlockedCosmetics, g.equippedCosmetics)
+			g.state = GameMenu
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+			g.shopSelection++
+			if g.shopSelection > len(g.unlockedCosmetics) {
+				g.shopSelection = 0
+			}
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+			g.shopSelection--
+			if g.shopSelection < 0 {
+				g.shopSelection = len(g.unlockedCosmetics)
+			}
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) || inpututil.IsKeyJustPressed(ebiten.KeySpace) {
+			if g.shopSelection == 0 { // Open Gambling Box
+				if g.totalBells >= 50 {
+					g.totalBells -= 50
+					cosmetic := RollGamblingBox()
+
+					// check if already unlocked
+					alreadyUnlocked := false
+					for _, id := range g.unlockedCosmetics {
+						if id == cosmetic.ID {
+							alreadyUnlocked = true
+							break
+						}
+					}
+
+					if alreadyUnlocked {
+						g.shopMessage = fmt.Sprintf("Duplicate %s! (Lost 50 bells)", cosmetic.Name)
+					} else {
+						g.unlockedCosmetics = append(g.unlockedCosmetics, cosmetic.ID)
+						g.shopMessage = fmt.Sprintf("Got %s! (%s)", cosmetic.Name, cosmetic.Rarity.String())
+					}
+					g.shopMessageTimer = 180
+				} else {
+					g.shopMessage = "Not enough bells!"
+					g.shopMessageTimer = 120
+				}
+			} else { // Equip/Unequip
+				idx := g.shopSelection - 1
+				if idx >= 0 && idx < len(g.unlockedCosmetics) {
+					id := g.unlockedCosmetics[idx]
+					cosmetic := getCosmeticByID(id)
+					if cosmetic != nil {
+						if current, ok := g.equippedCosmetics[string(cosmetic.Type)]; ok && current == id {
+							// unequip
+							delete(g.equippedCosmetics, string(cosmetic.Type))
+						} else {
+							// equip
+							g.equippedCosmetics[string(cosmetic.Type)] = id
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -190,6 +278,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	case GameOver:
 		g.drawGame(screen)
 		g.drawGameOver(screen)
+	case GameShop:
+		g.drawShop(screen)
 	}
 }
 
@@ -234,9 +324,19 @@ func (g *Game) drawMenu(screen *ebiten.Image) {
 		iw, ih := float64(g.menuGoat.Bounds().Dx()), float64(g.menuGoat.Bounds().Dy())
 		scale := 3.0
 		bob := math.Sin(g.menuPulse*2) * 6
+
+		goatX := sw/2 - iw*scale/2
+		goatY := sh*0.42 - ih*scale/2 + bob
+
 		op.GeoM.Scale(scale, scale)
-		op.GeoM.Translate(sw/2-iw*scale/2, sh*0.42-ih*scale/2+bob)
+		op.GeoM.Translate(goatX, goatY)
 		screen.DrawImage(g.menuGoat, op)
+
+		cosmeticOp := ebiten.GeoM{}
+		cosmeticOp.Translate(-iw/2, -ih/2)
+		cosmeticOp.Scale(scale, scale)
+		cosmeticOp.Translate(sw/2, sh*0.42+bob)
+		DrawCosmetics(screen, g.equippedCosmetics, cosmeticOp)
 	}
 
 	centerText := func(s string, y int) {
@@ -281,11 +381,73 @@ func (g *Game) drawMenu(screen *ebiten.Image) {
 		drawScaledText(screen, bestStr, sw/2-bw/2, sh*0.82, 1.0, color.NRGBA{255, 210, 50, 180})
 	}
 
+
 	if g.tick%60 < 40 {
-		prompt := "Click or Space to start"
+		prompt := "Click or Space to start, S for Shop"
 		pw := float64(len(prompt)) * 6
 		drawScaledText(screen, prompt, sw/2-pw*1.2/2, sh*0.88, 1.2, color.NRGBA{255, 255, 255, 200})
 	}
+}
+
+func (g *Game) drawShop(screen *ebiten.Image) {
+	sw := float64(ScreenWidth)
+	sh := float64(ScreenHeight)
+
+	// Draw total bells
+	bellsStr := fmt.Sprintf("Total Bells: %d", g.totalBells)
+	drawScaledText(screen, bellsStr, 20, 20, 1.5, color.NRGBA{255, 215, 0, 255})
+
+	// Shop Title
+	title := "- SHOP -"
+	drawScaledText(screen, title, sw/2-float64(len(title))*6*1.5/2, 60, 1.5, color.NRGBA{255, 255, 255, 255})
+
+	startY := 120.0
+	lineHeight := 24.0
+
+	// Draw "Open Gambling Box" option
+	boxStr := "Open Gambling Box (50 bells)"
+	clr := color.NRGBA{200, 200, 200, 255}
+	if g.shopSelection == 0 {
+		boxStr = "> " + boxStr
+		clr = color.NRGBA{255, 255, 100, 255}
+	}
+	drawScaledText(screen, boxStr, sw/2-float64(len(boxStr))*6/2, startY, 1.0, clr)
+
+	// Draw Unlocked Cosmetics
+	listStartY := startY + 40.0
+	for i, id := range g.unlockedCosmetics {
+		c := getCosmeticByID(id)
+		if c == nil {
+			continue
+		}
+
+		equippedStr := ""
+		if current, ok := g.equippedCosmetics[string(c.Type)]; ok && current == id {
+			equippedStr = " [EQUIPPED]"
+		}
+
+		itemStr := fmt.Sprintf("%s (%s)%s", c.Name, c.Rarity.String(), equippedStr)
+		itemClr := c.Rarity.Color()
+
+		if g.shopSelection == i+1 {
+			itemStr = "> " + itemStr
+			// Add a highlight
+			itemClr.R = uint8(math.Min(float64(itemClr.R)+50, 255))
+			itemClr.G = uint8(math.Min(float64(itemClr.G)+50, 255))
+			itemClr.B = uint8(math.Min(float64(itemClr.B)+50, 255))
+		}
+
+		drawScaledText(screen, itemStr, sw/2-float64(len(itemStr))*6/2, listStartY+float64(i)*lineHeight, 1.0, itemClr)
+	}
+
+	// Message
+	if g.shopMessageTimer > 0 {
+		drawScaledText(screen, g.shopMessage, sw/2-float64(len(g.shopMessage))*6/2, sh-60, 1.0, color.NRGBA{255, 100, 100, 255})
+	}
+
+	// Instructions
+	instructions := "UP/DOWN: Select | ENTER: Buy/Equip | ESC: Back"
+	drawScaledText(screen, instructions, sw/2-float64(len(instructions))*6*0.8/2, sh-30, 0.8, color.NRGBA{150, 150, 150, 255})
 }
 
 func (g *Game) AddShake(amount float64) {
@@ -306,7 +468,7 @@ func (g *Game) updateShake() {
 
 func (g *Game) drawGame(screen *ebiten.Image) {
 	g.level.Draw(screen, g.cameraY, g.shakeX, g.shakeY)
-	g.Goat.Draw(screen, g.cameraY, g.shakeX, g.shakeY)
+	g.Goat.Draw(screen, g.cameraY, g.shakeX, g.shakeY, g.equippedCosmetics)
 	g.drawFloatingTexts(screen, g.cameraY, g.shakeX, g.shakeY)
 	g.speedLines.Draw(screen)
 
