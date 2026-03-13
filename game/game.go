@@ -448,6 +448,26 @@ func (g *Game) drawShop(screen *ebiten.Image) {
 	// Instructions
 	instructions := "UP/DOWN: Select | ENTER: Buy/Equip | ESC: Back"
 	drawScaledText(screen, instructions, sw/2-float64(len(instructions))*6*0.8/2, sh-30, 0.8, color.NRGBA{150, 150, 150, 255})
+
+	// Draw Preview
+	if g.menuGoat != nil {
+		op := &ebiten.DrawImageOptions{}
+		iw, ih := float64(g.menuGoat.Bounds().Dx()), float64(g.menuGoat.Bounds().Dy())
+		scale := 4.0
+
+		goatX := sw*0.8 - iw*scale/2
+		goatY := sh*0.5 - ih*scale/2
+
+		op.GeoM.Scale(scale, scale)
+		op.GeoM.Translate(goatX, goatY)
+		screen.DrawImage(g.menuGoat, op)
+
+		cosmeticOp := ebiten.GeoM{}
+		cosmeticOp.Translate(-iw/2, -ih/2)
+		cosmeticOp.Scale(scale, scale)
+		cosmeticOp.Translate(sw*0.8, sh*0.5)
+		DrawCosmetics(screen, g.equippedCosmetics, cosmeticOp)
+	}
 }
 
 func (g *Game) AddShake(amount float64) {
