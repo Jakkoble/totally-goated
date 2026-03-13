@@ -72,6 +72,7 @@ func NewGame() *Game {
 
 	s := loadSave()
 	return &Game{
+		level:      NewLevel(), // Make sure level is never nil to avoid crash
 		state:      GameMenu,
 		menuGoat:   img,
 		bestScore:  s.BestScore,

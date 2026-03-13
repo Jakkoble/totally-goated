@@ -14,7 +14,7 @@ func (g *Game) fetchLeaderboard() {
 	g.leaderboardMutex.Unlock()
 
 	go func() {
-		resp, err := http.Get("/api/leaderboard")
+		resp, err := http.Get("http://localhost:8080/api/leaderboard")
 		if err != nil {
 			g.leaderboardMutex.Lock()
 			g.leaderboardLoading = false
@@ -52,7 +52,7 @@ func (g *Game) submitScoreAsync(name string, score int) {
 	}
 
 	go func() {
-		resp, err := http.Post("/api/score", "application/json", bytes.NewBuffer(data))
+		resp, err := http.Post("http://localhost:8080/api/score", "application/json", bytes.NewBuffer(data))
 		if err == nil {
 			resp.Body.Close()
 		}
